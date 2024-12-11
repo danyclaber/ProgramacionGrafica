@@ -30,7 +30,7 @@ http://localhost/nombre-del-proyecto
 Desarrollo de una escena interactiva utilizando primitivas geométricas básicas en 2D, como líneas y triángulos. Se exploran las capacidades de **WebGL 2.0** para manejar formas bidimensionales con colores y transformaciones básicas.
 
 ### Proyecto 2: Interacción en una Cuadrícula con Objetos en 2D
-Implementación de un sistema interactivo en 2D que detecta cuándo un objeto se encuentra dentro de una celda de una cuadrícula. Se manejan eventos de usuario para cambiar las propiedades visuales de los objetos, como el color o la posición, al interactuar con ellos.
+Implementación de un sistema interactivo en 2D con WebGL, donde al hacer clic en un objeto, este se mueve como una pieza de ajedrez en un tablero. El objetivo es recoger zanahorias distribuidas en el tablero, y el sistema maneja eventos de usuario para actualizar la posición del objeto y cambiar sus propiedades visuales, como el color, al interactuar con los elementos del entorno.
 
 ### Proyecto 3: Colisiones entre Objetos en 2D
 se enfoca en detectar colisiones entre un círculo y un cuadrado en 2D. Utiliza una función que calcula la distancia entre el centro del círculo y el punto más cercano del cuadrado, considerando una colisión si la distancia es menor o igual al radio del círculo. Este sistema permite modificar las propiedades visuales de los objetos al detectar la colisión.
