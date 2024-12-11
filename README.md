@@ -39,7 +39,7 @@ Desarrollo de un sistema para detectar colisiones entre objetos bidimensionales 
 Integración de **sprites** (imágenes 2D) en una escena bidimensional utilizando **WebGL 2.0**. Los sprites se usan para representar elementos decorativos o interactivos dentro de un entorno 2D.
 
 ### Proyecto 5: Lectura de Modelos 3D en Formato JSON
-Creación de un lector de archivos 3D en formato **JSON** para cargar y renderizar modelos tridimensionales. Los datos incluyen geometrías y colores**.
+Creación de un lector de archivos 3D en formato **JSON** para cargar y renderizar modelos tridimensionales. Los datos incluyen geometrías y colores.
 
 ### Proyecto 6: Lectura de Modelos 3D en Formato OBJ
 Implementación de un sistema que permite importar modelos tridimensionales en formato **OBJ**. Se utilizan las capacidades avanzadas de **WebGL 2.0** para renderizar geometrías complejas con eficiencia, incluyendo materiales y texturas asociados.
