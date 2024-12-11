@@ -1,0 +1,1274 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Menu Objeto</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Menú lateral -->
+    <div id="sidebar" class="d-flex flex-column p-3">
+        <h3 class="text-center">Menu</h3>
+        <hr>
+        <h5 class="text-center mb-3">Figuras 3D</h5>
+
+
+        <!-- Menú de figuras con un Dropdown que aparece al hacer hover -->
+        <ul class="nav nav-pills flex-column figuras-list">
+            <li class="nav-item dropdown">
+                <a href="#" class="nav-link active text-center dropdown-toggle" id="dropdownMenuLink"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-cube me-2"></i> Figura 1
+                </a>
+                <!-- Dropdown con opciones que se muestran al hacer hover sobre el li -->
+                <ul class="dropdown-menu text-center" aria-labelledby="dropdownMenuLink">
+                    <li><a class="dropdown-item" href="figura1_malla.html"><i class="fas fa-sitemap me-2"></i> Malla</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura1_sin_textura.html"><i class="fas fa-cube me-2"></i>
+                            Sin Textura</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura1_con_textura.html"><i class="fas fa-cube me-2"></i>
+                            Con Textura</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown mt-2">
+                <a href="#" class="nav-link active text-center dropdown-toggle" id="dropdownMenuLink"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-cube me-2"></i> Figura 2
+                </a>
+                <!-- Dropdown con opciones que se muestran al hacer hover sobre el li -->
+                <ul class="dropdown-menu text-center" aria-labelledby="dropdownMenuLink">
+                    <li><a class="dropdown-item" href="figura2_malla.html"><i class="fas fa-sitemap me-2"></i> Malla</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura2_sin_textura.html"><i class="fas fa-cube me-2"></i>
+                            Sin Textura</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura2_con_textura.html"><i class="fas fa-cube me-2"></i>
+                            Con Textura</a>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="nav-item dropdown mt-2">
+                <a href="#" class="nav-link active text-center dropdown-toggle" id="dropdownMenuLink"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-cube me-2"></i> Figura 3
+                </a>
+                <!-- Dropdown con opciones que se muestran al hacer hover sobre el li -->
+                <ul class="dropdown-menu text-center" aria-labelledby="dropdownMenuLink">
+                    <li><a class="dropdown-item" href="figura3_malla.html"><i class="fas fa-sitemap me-2"></i> Malla</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura3_sin_textura.html"><i class="fas fa-cube me-2"></i>
+                            Sin Textura</a>
+                    </li>
+
+                    <li><a class="dropdown-item" href="figura3_con_textura.html"><i class="fas fa-cube me-2"></i>
+                            Con Textura</a>
+                    </li>
+                </ul>
+            </li>
+
+        </ul>
+
+        <hr>
+        <h5 class="text-center mb-3">Opciones</h5>
+        <ul class="nav nav-pills flex-column">
+            <li class="nav-item">
+                <a href="figura3_sin_textura.html" class="nav-link bg-primary text-center">
+                    <i class="fas fa-rotate-left me-2"></i> Reiniciar
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <button id="startButton" class="btn btn-success w-100">
+                    <i class="fas fa-power-off me-2"></i> Iniciar
+                </button>
+            </li>
+            <li class="nav-item mt-2 d-flex justify-content-between">
+                <button id="zoomInButton" class="btn btn-secondary">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button id="zoomOutButton" class="btn btn-secondary">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+            </li>
+        </ul>
+        <hr>
+    </div>
+
+
+    <!-- Contenido principal -->
+    <div id="content">
+        <canvas id="webglcanvas"></canvas>
+    </div>
+
+    <script src="js/mat2.js"></script>
+
+    <!--
+      /***************************************************************************/
+      /* Paso 1: Se definen los códigos shaders.                                 */
+      /***************************************************************************/
+    -->
+    <script id="vs" type="vertex">
+      #version 300 es
+      precision mediump float;
+      uniform mat4 uMatrizProyeccion;
+      uniform mat4 uMatrizVista;
+      uniform mat4 uMatrizModelo;
+
+      layout(location = 0) in vec3 aVertices;
+      layout(location = 1) in vec3 aNormales;
+
+      out vec3 vNormales;
+      out vec3 vVertices;
+
+      void main() {
+
+        // En coordenadas de la camara (la normal)
+        vNormales = mat3(uMatrizVista) * mat3(uMatrizModelo) * normalize(aNormales);
+
+        // En coordenadas de la camara (el vertice)
+        vec4 vertices = uMatrizVista * uMatrizModelo * vec4(aVertices, 1.0);
+
+        // vertices(x,y,z)
+        vVertices = vertices.xyz / vertices.w;
+
+        // P' = Proy * Vista * Modelo * P
+        gl_Position = uMatrizProyeccion * vertices;
+      }
+    </script>
+
+    <script id="fs" type="fragment">
+      #version 300 es
+      precision highp float;
+      
+      uniform vec3 uPosicionVista;
+      uniform vec3 uPosicionLuz;
+      uniform vec3 u_Ia;
+      uniform vec3 u_Id;
+      uniform vec3 u_Is;
+      uniform vec3 u_ka;
+      uniform vec3 u_kd;
+      uniform vec3 u_ks;
+      uniform float u_brillo;
+
+      // Estas variables son enviadas del shader de vértice.
+      in vec3 vNormales;
+      in vec3 vVertices;
+
+      out vec4 color;
+      void main() {
+
+        // Vectores
+        vec3 N = normalize(vNormales);
+        vec3 L = normalize(uPosicionLuz - vVertices);
+        vec3 V = normalize(uPosicionVista - vVertices); // posicion - vista
+        vec3 H = normalize(L + V);
+
+        // Factores de iluminacion	
+        float NL = max(0.0, dot(N, L));
+        float NH = max(0.0, dot(N, H));
+
+        // Calcula la luz ambiente
+        vec3 luzAmbiente = u_ka * u_Ia;
+
+        // Calcula la luz difusa
+        vec3 luzDifusa = u_kd * u_Id * NL;
+
+        // Calcula la luz especular
+        vec3 luzEspecular = u_ks * u_Is * pow(NH, u_brillo);
+
+        // Modelo de Phong
+        vec3 rgb = luzAmbiente + luzDifusa + luzEspecular;
+
+        // La salida gl_FragColor es un vec4 que contiene el pixel color de este fragmento
+        color = vec4(rgb, 1.0);
+
+      }
+    </script>
+
+
+    <script>
+        "use strict";
+
+        /* Variables globales */
+        var canvas;
+        var programaID;
+        var gl;
+        var objeto;
+
+        /* Variables Uniformes */
+        var uMatrizProyeccion;
+        var uMatrizVista;
+        var uMatrizModelo;
+        var uPosicionVista;
+        var uPosicionLuz;
+        var u_Ia;
+        var u_Id;
+        var u_Is;
+        var u_ka;
+        var u_kd;
+        var u_ks;
+        var u_brillo;
+
+        /* Matrices */
+        var MatrizProyeccion = new Array(16);
+        var MatrizVista = new Array(16);
+        var MatrizModelo = new Array(16);
+
+        /* Ubicación de la vista */
+        var posicionVista = [0, 0, 0];
+
+        /* Ubicación de la luz */
+        var posicionLuz = [3, 3, -2];
+
+        /* Para la interacción */
+        var rotX = -90;
+        var rotY = 0;
+
+        var rotZ = 0;
+        const INCX = 0.3;
+        const INCY = 0.2;
+        const INCZ = 0.4;
+        var incX = 0;
+        var incY = 0;
+        var incZ = 0;
+        var animacion = false;
+
+        var antX;
+        var antY;
+        var boton_izq_presionado = false;
+
+        var tiempo_real, fin, duracion;
+        var inicio = Date.now(); // Tiempo Inicial
+        const PERIODO_MOVIMIENTO = 0.01; // 1/60 = 0.0167 (60 cuadros por seg.)
+        var tiempoMovimiento = PERIODO_MOVIMIENTO;
+
+
+        /***************************************************************************/
+        /* Paso 2: Se crean, compilan y enlazan los programas Shader               */
+        /***************************************************************************/
+        function compilaEnlazaLosShaders() {
+
+            /* Se compila el shader de vertice */
+            var shaderDeVertice = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(shaderDeVertice, document.getElementById("vs").text.trim());
+            gl.compileShader(shaderDeVertice);
+            if (!gl.getShaderParameter(shaderDeVertice, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shaderDeVertice));
+            }
+
+            /* Se compila el shader de fragmento */
+            var shaderDeFragmento = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(shaderDeFragmento, document.getElementById("fs").text.trim());
+            gl.compileShader(shaderDeFragmento);
+            if (!gl.getShaderParameter(shaderDeFragmento, gl.COMPILE_STATUS)) {
+                console.error(gl.getShaderInfoLog(shaderDeFragmento));
+            }
+
+            /* Se enlaza ambos shader */
+            programaID = gl.createProgram();
+            gl.attachShader(programaID, shaderDeVertice);
+            gl.attachShader(programaID, shaderDeFragmento);
+            gl.linkProgram(programaID);
+            if (!gl.getProgramParameter(programaID, gl.LINK_STATUS)) {
+                console.error(gl.getProgramInfoLog(programaID));
+            }
+
+            /* Se instala el programa de shaders para utilizarlo */
+            gl.useProgram(programaID);
+        }
+
+        /***************************************************************************/
+        /* La Clase Vector3                                                        */
+        /***************************************************************************/
+
+        class Vector3 {
+
+            /**
+             * Construye un nuevo Vector.
+             */
+            constructor(x, y, z) {
+                this.x = x;
+                this.y = y;
+                this.z = z;
+            }
+
+            /**
+             *                   u = Suma de vectores
+             *  u = v1 + v2     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             *                   u = (v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
+             */
+            mas(v2) {
+                return (new Vector3(this.x + v2.x, this.y + v2.y, this.z + v2.z));
+            }
+
+            /**
+             *                   u = Resta de vectores
+             *  u = v1 - v2     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             *                   u = (v1.x - v2.x, v1.y - v2.y, v1.z - v2.z)
+             */
+            menos(v2) {
+                return (new Vector3(this.x - v2.x, this.y - v2.y, this.z - v2.z));
+            }
+
+            /**
+             *                      u x v = Producto vectorial o producto cruz
+             * u = (u.x, u.y, u.z) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             * v = (v.x, v.y, v.z)  u x v = (u.y * v.z - u.z * v.y,   
+             *                               u.z * v.x - u.x * v.z,
+             *                               u.x * v.y - u.y * v.x)                  
+             */
+            producto_vectorial(v2) {
+                var r = new Vector3(0, 0, 0);
+                r.x = (this.y * v2.z) - (this.z * v2.y);
+                r.y = (this.z * v2.x) - (this.x * v2.z);
+                r.z = (this.x * v2.y) - (this.y * v2.x);
+                return r;
+            }
+
+            /**
+             *                      u . v = Producto escalar o producto punto
+             * u = (u.x, u.y, u.z) ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             * v = (v.x, v.y, v.z)  u . v = u.x v.x + u.y v.y + u.z v.z
+             *                                          
+             */
+            producto_escalar(v2) {
+                return (this.x * v2.x) + (this.y * v2.y) + (this.z * v2.z);
+            }
+
+            /**
+             *                     |v| = Longitud de un vector o magnitud
+             * v = (x, y, z)    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             *                     |v| = raiz_cuadrada (x^2 + y^2 + z^2) 
+             *                                          
+             */
+            longitud() {
+                return (Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z));
+            }
+
+            /**
+             *        v            u = Vector unitario o de longitud 1
+             *  u  = ---        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+             *       |v|           u = Vector normalizado
+             *                     
+             */
+            normaliza() {
+                var l = this.longitud();
+                if (l > 0) {
+                    this.x = this.x / l;
+                    this.y = this.y / l;
+                    this.z = this.z / l;
+                }
+            }
+
+            /**
+             *    3 
+             *     ^
+             *     |
+             *   v | 
+             *     |
+             *    1 -------- > 2
+             *          u
+             */
+            normal(v1, v2, v3) {
+                var u = new Vector3(0, 0, 0); // vector u
+                var v = new Vector3(0, 0, 0); // vector v
+                var n = new Vector3(0, 0, 0); // vector n
+
+                /* Calcula los vectores u y v */
+                u = v2.menos(v1);
+                v = v3.menos(v1);
+
+                /* n = u x v */
+                n = u.producto_vectorial(v);
+
+                /* Normaliza */
+                n.normaliza();
+
+                return n;
+            }
+
+            toString() {
+                return "Vector3 [x=" + this.x + ", y=" + this.y + ", z=" + this.z + "] <br>";
+            }
+        }
+
+
+        /***************************************************************************/
+        /* Paso 3: Se define la geometría y se almacenan en los buffers de memoria.*/
+        /* Paso 4: Se renderizan los objetos                                       */
+        /***************************************************************************/
+
+        /***************************************************************************/
+        /* La Clase Grupo                                                          */
+        /***************************************************************************/
+
+        class Grupo {
+
+            constructor() {
+                this.nombre = "si_falta"; /* Nombre del grupo */
+                this.triangulos = new Array();     /* Arreglo de índice de triangulos */
+                this.material = 0;        /* Indice del color del material del grupo */
+            }
+
+            setNombre(nombre) {
+                this.nombre = nombre;
+            }
+
+            getNombre() {
+                return this.nombre;
+            }
+
+            adiTriangulo(t) {
+                this.triangulos.push(t);
+            }
+
+            getTriangulo(indice) {
+                return this.triangulos[indice];
+            }
+
+            getNumTriangulos() {
+                return this.triangulos.length;
+            }
+
+            setMaterial(material) {
+                this.material = material;
+            }
+
+            getMaterial() {
+                return this.material;
+            }
+
+            toString() {
+                return this.nombre +
+                    "<br> triangulos: " + this.triangulos +
+                    "<br> material  : " + this.material;
+            }
+        }
+
+
+        /***************************************************************************/
+        /* La Clase Material                                                       */
+        /***************************************************************************/
+
+        class Material {
+            constructor() {
+                this.ambiente = new Array(3);  /* Arreglo del color ambiente */
+                this.difuso = new Array(3);    /* Arreglo del color difuso */
+                this.especular = new Array(3); /* Arreglo del color especular */
+                this.nombre = "si_falta";             /* Nombre del material */
+                this.brillo = 0;                      /* Exponente del brillo */
+                this.ambiente[0] = 0.2;
+                this.ambiente[1] = 0.2;
+                this.ambiente[2] = 0.2;
+                this.difuso[0] = 0.8;
+                this.difuso[1] = 0.8;
+                this.difuso[2] = 0.8;
+                this.especular[0] = 0.0;
+                this.especular[1] = 0.0;
+                this.especular[2] = 0.0;
+            }
+
+            inicializa(nombre, ambiente, difuso, especular, brillo) {
+                this.nombre = nombre;
+                this.ambiente = ambiente;
+                this.difuso = difuso;
+                this.especular = especular;
+                this.brillo = brillo;
+            }
+
+            setNombre(nombre) {
+                this.nombre = nombre;
+            }
+
+            setAmbiente(ambiente) {
+                this.ambiente = ambiente;
+            }
+
+            setDifuso(difuso) {
+                this.difuso = difuso;
+            }
+
+            setEspecular(especular) {
+                this.especular = especular;
+            }
+
+            setBrillo(brillo) {
+                this.brillo = brillo;
+            }
+
+            getNombre() {
+                return this.nombre;
+            }
+
+            getAmbiente() {
+                return this.ambiente;
+            }
+
+            getDifuso() {
+                return this.difuso;
+            }
+
+            getEspecular() {
+                return this.especular;
+            }
+
+            getBrillo() {
+                return this.brillo;
+            }
+
+            toString() {
+                return this.nombre +
+                    "<br> Ka: " + this.ambiente +
+                    "<br> Kd: " + this.difuso +
+                    "<br> Ks: " + this.especular +
+                    "<br> Ns: " + this.brillo;
+            }
+        }
+
+        /***************************************************************************/
+        /* La Clase ProcesaCadena                                                  */
+        /***************************************************************************/
+
+        class ProcesaCadena {
+
+            inicia(cadena) {
+                this.cadena = cadena;
+                this.indice = 0;
+            }
+
+            esDelimitador(c) {
+                return (
+                    c == ' ' ||
+                    c == '\t' ||
+                    c == '(' ||
+                    c == ')' ||
+                    c == '"' ||
+                    c == "'"
+                );
+            }
+
+            saltaDelimitadores() {
+                while (this.indice < this.cadena.length &&
+                    this.esDelimitador(this.cadena.charAt(this.indice))) {
+                    this.indice++;
+                }
+            };
+
+            obtLongPalabra(inicio) {
+                var i = inicio;
+                while (i < this.cadena.length &&
+                    !this.esDelimitador(this.cadena.charAt(i))) {
+                    i++;
+                }
+                return i - inicio;
+            };
+
+            getToken() {
+                var n, subcadena;
+                this.saltaDelimitadores();
+                n = this.obtLongPalabra(this.indice);
+                if (n === 0) {
+                    return null;
+                }
+                subcadena = this.cadena.substr(this.indice, n);
+                this.indice = this.indice + (n + 1);
+                return subcadena.trim();
+            }
+
+            getInt() {
+                var token = this.getToken();
+                if (token) {
+                    return parseInt(token, 10);
+                }
+                return null;
+            }
+
+            getFloat() {
+                var token = this.getToken();
+                if (token) {
+                    return parseFloat(token);
+                }
+                return null;
+            }
+        }
+
+        /***************************************************************************/
+        /* La Clase Objeto                                                         */
+        /***************************************************************************/
+
+        class Objeto {
+            constructor(gl, ruta, nombreArchivo) {
+                var x, y, z, token, lineas, numVertices, numNormales, numTriangulos;
+                var minX, maxX, minY, maxY, minZ, maxZ, indiceDeGrupo;
+
+                /* Arreglo de los colores de los Materiales */
+                this.materiales = [];
+
+                /* Arreglo de Grupos */
+                this.grupos = [];
+
+                /* Indices */
+                this.indices = [];
+
+                /* Las coordenadas cartesianas (x, y, z) */
+                var vertices = [];
+
+                /* Las normales x c/cara (x,y,z) */
+                var normales = [];
+                var normales_prev = [];
+
+                /* Número de Vértices */
+                numVertices = 0;
+
+                /* Número de Normales */
+                numNormales = 0;
+
+                /* Número de Triangulos */
+                numTriangulos = 0;
+
+                // Agrega un grupo
+                this.grupos.push(new Grupo());
+                indiceDeGrupo = 0;
+
+                /* Lee el archivo .obj */
+                var datos_obj = this.lee_archivo_obj(ruta + nombreArchivo);
+
+                /* Divide por lineas */
+                lineas = datos_obj.split("\n");
+
+                // Crea ProcesaCadena
+                var pc = new ProcesaCadena();
+
+                minX = Number.MAX_VALUE; maxX = Number.MIN_VALUE;
+                minY = Number.MAX_VALUE; maxY = Number.MIN_VALUE;
+                minZ = Number.MAX_VALUE; maxZ = Number.MIN_VALUE;
+
+                for (var i = 0; i < lineas.length; i++) {
+                    pc.inicia(lineas[i]);
+                    token = pc.getToken();
+                    if (token != null) {
+                        switch (token) {
+                            case 'mtllib': /* nombre del arch. de materiales */
+                                var nombre_archivo_material = pc.getToken();
+
+                                /* Lee los datos del archivo .mtl */
+                                this.lee_datos_archivo_mtl(ruta + nombre_archivo_material);
+
+                                break;
+                            case 'v': /* vértice */
+                                x = pc.getFloat();
+                                y = pc.getFloat();
+                                z = pc.getFloat();
+                                vertices.push(x);
+                                vertices.push(y);
+                                vertices.push(z);
+                                numVertices++;
+
+                                minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+                                minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+                                minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+
+                                /* Inicializa la normal de cada vértice */
+                                normales_prev.push(new Vector3(0, 0, 0));
+                                numNormales++;
+
+                                break;
+                            case 'f': /* cara */
+                                this.indices.push(pc.getInt() - 1);
+                                this.indices.push(pc.getInt() - 1);
+                                this.indices.push(pc.getInt() - 1);
+                                this.grupos[indiceDeGrupo].adiTriangulo(numTriangulos);
+                                numTriangulos++;
+                                var tokenEntero = pc.getInt();
+                                while (tokenEntero != null) {
+                                    var k = this.indices.length;
+                                    this.indices.push(this.indices[k - 3]);    // v0
+                                    this.indices.push(this.indices[k - 1]);    // v2
+                                    this.indices.push(tokenEntero - 1); // v3
+                                    this.grupos[indiceDeGrupo].adiTriangulo(numTriangulos);
+                                    numTriangulos++;
+                                    tokenEntero = pc.getInt();
+                                }
+                                break;
+                            case 'g':
+                            case 'group': /* nombre de grupo */
+                                var nombre = pc.getToken();
+                                if (nombre != null) {
+                                    indiceDeGrupo = this.buscaGrupo(nombre);
+                                    if (indiceDeGrupo == -1) {
+                                        var g = new Grupo();
+                                        g.setNombre(nombre);
+                                        this.grupos.push(g);
+                                        indiceDeGrupo = this.grupos.length - 1;
+                                    }
+                                }
+                                break;
+                            case 'usemtl': /* nombre de material */
+                                var nombre = pc.getToken();
+                                var indiceDeMaterial = this.buscaMaterial(nombre);
+                                this.grupos[indiceDeGrupo].setMaterial(indiceDeMaterial);
+                                break;
+                        }
+                    }
+                }
+
+                /* Redimensiona las coordenadas entre [-1,1] */
+                var tam_max = 0, escala;
+                tam_max = Math.max(tam_max, maxX - minX);
+                tam_max = Math.max(tam_max, maxY - minY);
+                tam_max = Math.max(tam_max, maxZ - minZ);
+                escala = 2.0 / tam_max;
+
+                /* Actualiza los vértices */
+                for (var i = 0; i < numVertices * 3; i += 3) {
+                    vertices[i] = escala * (vertices[i] - minX) - 1.0;
+                    vertices[i + 1] = escala * (vertices[i + 1] - minY) - 1.0;
+                    vertices[i + 2] = escala * (vertices[i + 2] - minZ) - 1.0;
+                }
+
+                /* Lee las caras y obtiene las normales de los vértices */
+                var v1 = new Vector3(0, 0, 0); // v1
+                var v2 = new Vector3(0, 0, 0); // v2
+                var v3 = new Vector3(0, 0, 0); // v3
+                var normalCara = new Vector3(0, 0, 0);  // normal
+                var a, b, c, a1, b1, c1;
+
+                for (var i = 0; i < numTriangulos * 3; i += 3) {
+                    a = this.indices[i];
+                    b = this.indices[i + 1];
+                    c = this.indices[i + 2];
+
+                    a1 = a * 3; // Obtiene la posición del primer vértice
+                    v1.x = vertices[a1 + 0]; // v1
+                    v1.y = vertices[a1 + 1];
+                    v1.z = vertices[a1 + 2];
+
+                    b1 = b * 3; // Obtiene la posición del segundo vértice
+                    v2.x = vertices[b1 + 0]; // v2
+                    v2.y = vertices[b1 + 1];
+                    v2.z = vertices[b1 + 2];
+
+                    c1 = c * 3; // Obtiene la posición del tercer vértice
+                    v3.x = vertices[c1 + 0]; // v3
+                    v3.y = vertices[c1 + 1];
+                    v3.z = vertices[c1 + 2];
+
+                    /* Obtiene la normal de la cara */
+                    normalCara = normalCara.normal(v1, v2, v3);
+
+                    /* Suma la normal de la cara, a la normal de cada vértice */
+                    normales_prev[a] = normalCara.mas(normales_prev[a]); // normal del vértice a
+                    normales_prev[b] = normalCara.mas(normales_prev[b]); // normal del vértice b
+                    normales_prev[c] = normalCara.mas(normales_prev[c]); // normal del vértice c
+                }
+
+                /* Lee las normales de los vértices */
+                for (var i = 0; i < numNormales; i++) {
+
+                    /* Normaliza la normal de cada vértice */
+                    normales_prev[i].normaliza();
+
+                    normales.push(normales_prev[i].x);
+                    normales.push(normales_prev[i].y);
+                    normales.push(normales_prev[i].z);
+
+                }
+
+                var verticeBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, verticeBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(0);
+                gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+                var normalBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normales), gl.STATIC_DRAW);
+                gl.enableVertexAttribArray(1);
+                gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+
+                gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+                /* Se genera un nombre (código) para el buffer */
+                this.indiceBuffer = gl.createBuffer();
+
+            }
+
+            dibuja(gl) {
+
+                var ambiente, difuso, especular, brillo, indice, numTriangulos, i;
+
+                i = 0;
+
+                while (i < this.grupos.length) {
+
+                    /* Obtiene el número de triángulos del grupo */
+                    numTriangulos = this.grupos[i].getNumTriangulos();
+
+                    if (numTriangulos == 0) {
+                        i++;
+                        continue;
+                    }
+
+                    /* Obtiene el indice del material */
+                    indice = this.grupos[i].getMaterial();
+
+                    ambiente = this.materiales[indice].getAmbiente();
+                    difuso = this.materiales[indice].getDifuso();
+                    especular = this.materiales[indice].getEspecular();
+                    brillo = this.materiales[indice].getBrillo();
+
+                    /* Se envia el Material al shader de fragmento */
+                    gl.uniform3f(u_ka, ambiente[0], ambiente[1], ambiente[2]);
+                    gl.uniform3f(u_kd, difuso[0], difuso[1], difuso[2]);
+                    gl.uniform3f(u_ks, especular[0], especular[1], especular[2]);
+                    gl.uniform1f(u_brillo, brillo);
+
+                    /* Se habilita el arreglo de los vértices (indice = 0) */
+                    gl.enableVertexAttribArray(0);
+
+                    /* Se habilita el arreglo de las normales (indice = 1) */
+                    gl.enableVertexAttribArray(1);
+
+                    var _indices = [];
+
+                    /* Lee los indices */
+                    for (var j = 0; j < numTriangulos; j++) {
+                        let _indice = this.grupos[i].getTriangulo(j);
+                        _indices.push(this.indices[_indice * 3 + 0]);
+                        _indices.push(this.indices[_indice * 3 + 1]);
+                        _indices.push(this.indices[_indice * 3 + 2]);
+                    }
+
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indiceBuffer);
+                    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(_indices), gl.STATIC_DRAW);
+                    gl.drawElements(gl.TRIANGLES, numTriangulos * 3, gl.UNSIGNED_SHORT, 0);
+                    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+                    i++;
+
+                }
+
+            }
+
+            /* Lee el archivo OBJ */
+            lee_archivo_obj(nombreArchivo) {
+                var byteArray = [];
+                var request = new XMLHttpRequest();
+                request.onreadystatechange = function () {
+                    if (request.readyState === 4 && request.status !== 404) {
+                        byteArray = request.responseText
+                    }
+                }
+                request.open('GET', nombreArchivo, false); // Crea una solicitud para abrir el archivo
+                request.send(null);                        // Enviando la solicitud
+                return byteArray;
+            }
+
+            /* Lee el archivo MTL */
+            lee_archivo_mtl(nombreArchivo) {
+                var byteArray = [];
+                var request = new XMLHttpRequest();
+                request.onreadystatechange = function () {
+                    if (request.readyState === 4 && request.status !== 404) {
+                        byteArray = request.responseText
+                    }
+                }
+                request.open('GET', nombreArchivo, false); // Crea una solicitud para abrir el archivo
+                request.send(null);                        // Enviando la solicitud
+                return byteArray;
+            }
+
+            /* Lee los datos de un archivo .MTL (archivo de los colores de los materiales) */
+            lee_datos_archivo_mtl(nombreArchivo) {
+
+                /* Lee el archivo .mtl */
+                var datos_mtl = this.lee_archivo_mtl(nombreArchivo);
+
+                /* Divide por lineas */
+                var lineas = datos_mtl.split('\n');
+
+                lineas.push(null);  // Adiciona null
+
+                var indice = 0;
+
+                var linea;
+
+                // Crea ProcesaCadena
+                var pc = new ProcesaCadena();
+
+                while ((linea = lineas[indice++]) != null) {
+                    pc.inicia(linea);
+                    var token = pc.getToken();
+                    if (token == null) continue;
+
+                    switch (token) {
+                        case '#':
+                            continue;
+                        case 'newmtl':  /* nombre del material */
+                            var nombre = pc.getToken();
+                            this.materiales.push(new Material());
+                            this.materiales[this.materiales.length - 1].setNombre(nombre);
+                            break;
+                        case 'Ka':      /* ambiente */
+                            var ambiente = new Array(3);
+                            ambiente[0] = pc.getFloat();
+                            ambiente[1] = pc.getFloat();
+                            ambiente[2] = pc.getFloat();
+                            this.materiales[this.materiales.length - 1].setAmbiente(ambiente);
+                            break;
+                        case 'Kd':      /* difuso */
+                            var difuso = new Array(3);
+                            difuso[0] = pc.getFloat();
+                            difuso[1] = pc.getFloat();
+                            difuso[2] = pc.getFloat();
+                            this.materiales[this.materiales.length - 1].setDifuso(difuso);
+                            break;
+                        case 'Ks':      /* especular */
+                            var especular = new Array(3);
+                            especular[0] = pc.getFloat();
+                            especular[1] = pc.getFloat();
+                            especular[2] = pc.getFloat();
+                            this.materiales[this.materiales.length - 1].setEspecular(especular);
+                            break;
+                        case 'Ns':      /* brillo */
+                            var brillo = pc.getFloat();
+                            this.materiales[this.materiales.length - 1].setBrillo(brillo);
+                            break;
+                    }
+                }
+            }
+
+            /* Busca el grupo */
+            buscaGrupo(nombre) {
+                for (var i = 0; i < this.grupos.length; i++)
+                    if (nombre == this.grupos[i].getNombre())
+                        return i;
+                return -1;
+            }
+
+            /* Busca el Material */
+            buscaMaterial(nombre) {
+                for (var i = 0; i < this.materiales.length; i++)
+                    if (nombre == this.materiales[i].getNombre())
+                        return i;
+                return -1;
+            }
+        }
+
+        /***************************************************************************/
+        /* Eventos del Ratón                                                       */
+        /***************************************************************************/
+
+        function mouseDown(event) {
+            var posx = new Number();
+            var posy = new Number();
+
+            /* Obtiene la coordenada dentro de la área mayor */
+            if (event.x != undefined && event.y != undefined) {
+                posx = event.x;
+                posy = event.y;
+            } else {
+                posx = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                posy = event.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+            }
+
+            /* Obtiene la coordenada dentro del canvas */
+            posx = posx - canvas.offsetLeft;
+            posy = posy - canvas.offsetTop;
+
+            antX = posx;
+            antY = posy;
+
+            boton_izq_presionado = true;
+
+            return false;
+        };
+
+        function mouseUp(e) {
+            boton_izq_presionado = false;
+        };
+
+        function mouseMove(event) {
+
+            if (!boton_izq_presionado)
+                return false;
+
+            var posx = new Number();
+            var posy = new Number();
+
+            /* Obtiene la coordenada dentro de la área mayor */
+            if (event.x != undefined && event.y != undefined) {
+                posx = event.x;
+                posy = event.y;
+            } else {
+                posx = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                posy = event.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+            }
+
+            /* Obtiene la coordenada dentro del canvas */
+            posx = posx - canvas.offsetLeft;
+            posy = posy - canvas.offsetTop;
+
+            var dx = posx - antX;
+            var dy = posy - antY;
+
+            rotX = rotX + dx * 0.36; // 180 / 500 = 0.36
+            rotY = rotY + dy * 0.36;
+
+            antX = posx;
+            antY = posy;
+
+        };
+
+        function dibuja() {
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            /* Matriz del Modelo */
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, posX, posY, -6.8);
+            rotacionY(MatrizModelo, rotY);
+            rotacionX(MatrizModelo, rotX);
+            rotacionZ(MatrizModelo, rotZ);
+            escalacion(MatrizModelo, escala, escala, escala); // Aplica el factor de escala
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+            /* Renderiza */
+            objeto.dibuja(gl);
+
+            /* Animación */
+            if (animacion) {
+                fin = Date.now(); // Tiempo Final
+                duracion = fin - inicio;
+                inicio = fin;
+                tiempo_real = duracion / 1000.0;
+
+                tiempoMovimiento = tiempoMovimiento - tiempo_real;
+                if (tiempoMovimiento < 0.001) {
+                    tiempoMovimiento = PERIODO_MOVIMIENTO;
+                    // rotX = rotX + incX;
+                    rotY = rotY + incY;
+                    // rotZ = rotZ + incZ;
+                }
+            }
+
+            requestAnimationFrame(dibuja);
+        }
+
+        // Variables para manejar el estado del ratón
+        var mouseDown = false;
+        var moveObject = false; // Indica si estamos moviendo el objeto
+        var lastMouseX = 0;
+        var lastMouseY = 0;
+        var posX = 0; // Posición inicial del objeto en X
+        var posY = 1.4; // Posición inicial del objeto en Y
+        var escala = 2.3; // Factor de escala inicial
+
+
+        function toggleAnimacion() {
+            animacion = !animacion;
+            if (animacion) {
+                incX = INCX;
+                incY = INCY;
+                incZ = INCZ;
+            } else {
+                incX = incY = incZ = 0;
+            }
+            document.getElementById("startButton").innerText = animacion ? "Detener" : "Iniciar";
+        }
+
+        function inicializaEventosMouse(canvas) {
+            // Evento para registrar cuando se presiona el botón del ratón
+            canvas.addEventListener('mousedown', function (e) {
+                if (e.button === 0) { // Botón izquierdo del ratón
+                    mouseDown = true;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                } else if (e.button === 2) { // Botón derecho del ratón
+                    moveObject = true;
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+
+            // Evento para actualizar la posición o rotación mientras se mueve el ratón
+            canvas.addEventListener('mousemove', function (e) {
+                if (mouseDown) {
+                    // Rotación del objeto
+                    var deltaX = e.clientX - lastMouseX;
+                    var deltaY = e.clientY - lastMouseY;
+
+                    rotY += deltaX * 0.2; // Sensibilidad para rotación en Y
+                    rotX += deltaY * 0.2; // Sensibilidad para rotación en X
+
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                } else if (moveObject) {
+                    // Movimiento del objeto
+                    var deltaX = e.clientX - lastMouseX;
+                    var deltaY = e.clientY - lastMouseY;
+
+                    posX += deltaX * 0.01; // Ajusta la sensibilidad del movimiento
+                    posY -= deltaY * 0.01; // Ajusta la sensibilidad del movimiento
+
+                    lastMouseX = e.clientX;
+                    lastMouseY = e.clientY;
+                }
+            });
+
+            // Evento para registrar cuando se suelta el botón del ratón
+            canvas.addEventListener('mouseup', function (e) {
+                if (e.button === 0) { // Botón izquierdo del ratón
+                    mouseDown = false;
+                } else if (e.button === 2) { // Botón derecho del ratón
+                    moveObject = false;
+                }
+            });
+
+            // Evento para manejar cuando el ratón sale del canvas
+            canvas.addEventListener('mouseleave', function () {
+                mouseDown = false;
+                moveObject = false;
+            });
+
+            // Evento para manejar el zoom con la rueda del ratón
+            canvas.addEventListener('wheel', function (e) {
+                e.preventDefault(); // Previene el scroll de la página
+
+                // Ajustar el factor de escala según el movimiento de la rueda
+                if (e.deltaY < 0) {
+                    escala *= 1.1; // Acercar
+                } else {
+                    escala *= 0.9; // Alejar
+                }
+
+                // Restringir el factor de escala para evitar valores extremos
+                escala = Math.min(Math.max(escala, 0.1), 10.0);
+            });
+        }
+
+        // Vincular el botón de acercar
+        document.getElementById('zoomInButton').addEventListener('click', function () {
+            escala *= 1.1;  // Acercar
+            escala = Math.min(Math.max(escala, 0.1), 10.0);  // Restringir la escala
+            console.log('Escala después de acercar: ', escala);
+        });
+
+        // Vincular el botón de alejar
+        document.getElementById('zoomOutButton').addEventListener('click', function () {
+            escala *= 0.9;  // Alejar
+            escala = Math.min(Math.max(escala, 0.1), 10.0);  // Restringir la escala
+            console.log('Escala después de alejar: ', escala);
+        });
+
+
+
+        /***************************************************************************/
+        /* Paso 5: Se prepara el lienzo y se obtiene el contexto del WebGL.        */
+        /***************************************************************************/
+
+
+        function main() {
+            canvas = document.getElementById("webglcanvas");
+            // Deshabilitar el menú contextual al hacer clic derecho
+            canvas.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+            });
+            gl = canvas.getContext("webgl2");
+            if (!gl) {
+                document.write("WebGL 2.0 no está disponible en tu navegador");
+                return;
+            }
+
+            // Ajustar el tamaño del canvas al tamaño de la ventana
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+
+            window.addEventListener("resize", resizeCanvas);
+            resizeCanvas(); // Llama a la función para establecer el tamaño inicial del canvas
+
+            /* Inicializa el botón de inicio/parada */
+            document.getElementById("startButton").addEventListener("click", toggleAnimacion);
+
+            /* Eventos de Mause */
+            inicializaEventosMouse(canvas);
+
+
+
+            compilaEnlazaLosShaders();
+
+            gl.useProgram(programaID);
+            uMatrizProyeccion = gl.getUniformLocation(programaID, "uMatrizProyeccion");
+            uMatrizVista = gl.getUniformLocation(programaID, "uMatrizVista");
+            uMatrizModelo = gl.getUniformLocation(programaID, "uMatrizModelo");
+
+
+            uPosicionVista = gl.getUniformLocation(programaID, "uPosicionVista");
+            uPosicionLuz = gl.getUniformLocation(programaID, "uPosicionLuz");
+            u_Ia = gl.getUniformLocation(programaID, "u_Ia");
+            u_Id = gl.getUniformLocation(programaID, "u_Id");
+            u_Is = gl.getUniformLocation(programaID, "u_Is");
+            u_ka = gl.getUniformLocation(programaID, "u_ka");
+            u_kd = gl.getUniformLocation(programaID, "u_kd");
+            u_ks = gl.getUniformLocation(programaID, "u_ks");
+            u_brillo = gl.getUniformLocation(programaID, "u_brillo");
+
+            /* Matriz de Proyección */
+            perspective(MatrizProyeccion, 60, gl.canvas.width / gl.canvas.height, 1, 100);
+            gl.uniformMatrix4fv(uMatrizProyeccion, false, MatrizProyeccion);
+
+            /* Matriz de la Cámara o de la Vista */
+            lookAt(MatrizVista, posicionVista[0], posicionVista[1], posicionVista[2], 0, 0, -1, 0, 1, 0);
+            gl.uniformMatrix4fv(uMatrizVista, false, MatrizVista);
+
+            /* Posición de la vista */
+            gl.uniform3fv(uPosicionVista, posicionVista);
+
+            /* Posición de la luz */
+            var pLuz = new Array(3);
+            multiplicaMV(pLuz, MatrizVista, posicionLuz);
+            gl.uniform3fv(uPosicionLuz, pLuz);
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+            // Configurar la iluminación para verde
+            gl.uniform3f(u_Ia, 0.2, 0.2, 0.2);  // Luz ambiental suave
+            gl.uniform3f(u_Id, 0.0, 1.0, 0.0);  // Luz difusa verde
+            gl.uniform3f(u_Is, 0.0, 1.0, 0.0);  // Luz especular verde
+
+
+
+
+            // Cargar un objeto predeterminado directamente (por ejemplo, Cubo.obj)
+            var ruta = "obj/"; // Carpeta donde están los modelos
+            objeto = new Objeto(gl, ruta, "78434.obj"); // Cargar el objeto cubo (puedes cambiar el nombre de archivo aquí)
+            dibuja();
+        }
+
+
+        window.onload = main;
+    </script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
