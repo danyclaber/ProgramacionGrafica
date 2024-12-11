@@ -33,7 +33,7 @@ Desarrollo de una escena interactiva utilizando primitivas geométricas básicas
 Implementación de un sistema interactivo en 2D que detecta cuándo un objeto se encuentra dentro de una celda de una cuadrícula. Se manejan eventos de usuario para cambiar las propiedades visuales de los objetos, como el color o la posición, al interactuar con ellos.
 
 ### Proyecto 3: Colisiones entre Objetos en 2D
-Se centra en la detección de colisiones entre un círculo y un cuadrado en un espacio bidimensional. Para ello, se implementa una función que calcula la distancia entre el centro del círculo y el punto más cercano del cuadrado. La función compara esta distancia con el radio del círculo, y si la distancia es menor o igual al radio, se considera que ha ocurrido una colisión. Este sistema permite cambiar las propiedades visuales de los objetos, como su color o posición, al detectar la colisión entre ellos.
+se enfoca en detectar colisiones entre un círculo y un cuadrado en 2D. Utiliza una función que calcula la distancia entre el centro del círculo y el punto más cercano del cuadrado, considerando una colisión si la distancia es menor o igual al radio del círculo. Este sistema permite modificar las propiedades visuales de los objetos al detectar la colisión.
 
 ### Proyecto 4: Uso de Sprites en Escenas 2D
 Integración de **sprites** (imágenes 2D) en una escena bidimensional utilizando **WebGL 2.0**. Los sprites se usan para representar elementos decorativos o interactivos dentro de un entorno 2D.
