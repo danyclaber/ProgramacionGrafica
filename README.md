@@ -1,6 +1,6 @@
 ## Proyectos INF-323
 
-## 1 Requisitos
+## 1. Requisitos
 
 Para ejecutar los programas, puedes seguir una de las siguientes opciones:
 
