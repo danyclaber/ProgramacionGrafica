@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escena</title>
+</head>
+
+<style>
+    body {
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+    }
+    h2{
+        color: white;
+    }
+</style>
+
+<body>
+    <!-- Canvas para renderizar gráficos con WebGL -->
+     <!-- <h2>Medrano Kantuta Christian Daniel</h2> -->
+    <canvas id="webglcanvas" style="border: solid 10px orange" width="550" height="550"></canvas>
+
+    <!-- Se definen los shaders -->
+    <!-- Vertex Shader: Define cómo se posicionan los vértices -->
+    <script id="vs" type="vertex">
+        #version 300 es
+        precision mediump float;
+        uniform mat4 uMatrizProyeccion;
+        uniform mat4 uMatrizVista;
+        uniform mat4 uMatrizModelo;
+        layout (location = 0) in vec2 aVertices;
+        layout (location = 1) in vec4 aColores;
+        out vec4 vColores;
+        void main() {
+            vColores = aColores;
+            gl_Position = uMatrizProyeccion * uMatrizVista * uMatrizModelo * vec4(aVertices, 0.0, 1.0);
+        }
+    </script>
+
+    <!-- Fragment Shader: Define el color de los píxeles -->
+    <script id="fs" type="fragment">
+        #version 300 es
+        precision mediump float;
+        in vec4 vColores;
+        out vec4 color;
+        void main() {
+            color = vColores;
+        }
+    </script>
+
+    <script>
+
+
+        var uMatrizProyeccion;
+        var uMatrizVista;
+        var uMatrizModelo;
+        var MatrizProyeccion = new Array(16);
+        var MatrizVista = new Array(16);
+        var MatrizModelo = new Array(16);
+
+
+        function identidad(r) {
+            r[0] = 1; r[4] = 0; r[8] = 0; r[12] = 0;
+            r[1] = 0; r[5] = 1; r[9] = 0; r[13] = 0;
+            r[2] = 0; r[6] = 0; r[10] = 1; r[14] = 0;
+            r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+        }
+
+        function ortho(r, izq, der, abj, arr, cerca, lejos) {
+            r[0] = 2 / (der - izq); r[4] = 0; r[8] = 0; r[12] = -(der + izq) / (der - izq);
+            r[1] = 0; r[5] = 2 / (arr - abj); r[9] = 0; r[13] = -(arr + abj) / (arr - abj);
+            r[2] = 0; r[6] = 0; r[10] = -2 / (lejos - cerca); r[14] = -(lejos + cerca) / (lejos - cerca);
+            r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+        }
+
+        function traslacion(matriz, tx, ty, tz) {
+            var r = new Array(16);
+            r[0] = 1; r[4] = 0; r[8] = 0; r[12] = tx;
+            r[1] = 0; r[5] = 1; r[9] = 0; r[13] = ty;
+            r[2] = 0; r[6] = 0; r[10] = 1; r[14] = tz;
+            r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+            multiplica(matriz, matriz, r);
+        }
+
+        function multiplica(c, a, b) {
+            let r = new Array(16);
+            let i, j, k;
+            for (i = 0; i < 4; i++) {
+                for (j = 0; j < 4; j++) {
+                    let s = 0;
+                    for (k = 0; k < 4; k++)
+                        s = s + a[i + k * 4] * b[k + j * 4];
+                    r[i + j * 4] = s;
+                }
+            }
+            for (i = 0; i < 16; i++)
+                c[i] = r[i];
+        }
+
+        function main() {
+            // Obtiene el canvas y el contexto WebGL
+            var canvas = document.getElementById("webglcanvas");
+            var gl = canvas.getContext("webgl2");
+
+            // Configura el área de dibujo del canvas
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+            // Compilación y enlace de los shaders
+            var shaderDeVertice = gl.createShader(gl.VERTEX_SHADER);
+            gl.shaderSource(shaderDeVertice, document.getElementById("vs").text.trim());
+            gl.compileShader(shaderDeVertice);
+
+            var shaderDeFragmento = gl.createShader(gl.FRAGMENT_SHADER);
+            gl.shaderSource(shaderDeFragmento, document.getElementById("fs").text.trim());
+            gl.compileShader(shaderDeFragmento);
+
+            var programaID = gl.createProgram();
+            gl.attachShader(programaID, shaderDeVertice);
+            gl.attachShader(programaID, shaderDeFragmento);
+            gl.linkProgram(programaID);
+
+            //------------CODIGO HONGO-----------------
+            var tamañoCuadrado = 0.007; // Tamaño del cuadrado
+            var separación = 0.005;     // Separación entre cuadrados
+            var filas = 16;
+            var columnas = 16;
+
+            // Array para almacenar los vértices
+            var vertices = [];
+
+            // Calcula el tamaño total de la cuadrícula
+            var anchoCuadrícula = columnas * (tamañoCuadrado + separación);
+            var altoCuadrícula = filas * (tamañoCuadrado + separación);
+
+            // Calcula el desplazamiento necesario para centrar la cuadrícula
+            var desplazamientoX = -anchoCuadrícula / 2;
+            var desplazamientoY = altoCuadrícula / 2;
+
+            // Genera los vértices para cada fila y columna
+            for (var fila = 0; fila < filas; fila++) {
+                for (var columna = 0; columna < columnas; columna++) {
+                    // Calcula la posición del cuadrado
+                    var xOffset = columna * (tamañoCuadrado + separación) + desplazamientoX;
+                    var yOffset = -fila * (tamañoCuadrado + separación) + desplazamientoY;
+
+                    // Vértices del cuadrado
+                    vertices.push(
+                        xOffset - tamañoCuadrado / 2, yOffset + tamañoCuadrado / 2,  // Superior izquierdo
+                        xOffset + tamañoCuadrado / 2, yOffset + tamañoCuadrado / 2,  // Superior derecho
+                        xOffset - tamañoCuadrado / 2, yOffset - tamañoCuadrado / 2,  // Inferior izquierdo
+                        xOffset - tamañoCuadrado / 2, yOffset - tamañoCuadrado / 2,  // Inferior izquierdo
+                        xOffset + tamañoCuadrado / 2, yOffset + tamañoCuadrado / 2,  // Superior derecho
+                        xOffset + tamañoCuadrado / 2, yOffset - tamañoCuadrado / 2   // Inferior derecho
+                    );
+                }
+            }
+
+            // Define los bloques de colores
+            const colorBlanco = [
+                1, 1, 1, 1,
+                1, 1, 1, 1,
+                1, 1, 1, 1,
+                1, 1, 1, 1,
+                1, 1, 1, 1,
+                1, 1, 1, 1
+            ];
+
+            const colorNegro = [
+                0, 0, 0, 1,
+                0, 0, 0, 1,
+                0, 0, 0, 1,
+                0, 0, 0, 1,
+                0, 0, 0, 1,
+                0, 0, 0, 1
+            ];
+
+            const colorRojo = [
+                1, 0, 0, 1,
+                1, 0, 0, 1,
+                1, 0, 0, 1,
+                1, 0, 0, 1,
+                1, 0, 0, 1,
+                1, 0, 0, 1
+            ];
+
+            // Función para repetir un bloque de colores
+            function repetirBloque(color, repeticiones) {
+                const bloque = [];
+                for (let i = 0; i < repeticiones; i++) {
+                    bloque.push(...color);
+                }
+                return bloque;
+            }
+
+            // Generar la matriz de colores con todas las secuencias
+            const colores = [
+                // 5 blanco, 6 negro, 5 blanco
+                ...repetirBloque(colorBlanco, 5),
+                ...repetirBloque(colorNegro, 6),
+                ...repetirBloque(colorBlanco, 5),
+
+                // 3 blanco, 2 negro, 4 rojo, 2 blanco, 2 negro, 3 blanco
+                ...repetirBloque(colorBlanco, 3),
+                ...repetirBloque(colorNegro, 2),
+                ...repetirBloque(colorRojo, 4),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 2),
+                ...repetirBloque(colorBlanco, 3),
+
+                // 2 blanco, 1 negro, 2 blanco, 4 rojo, 4 blanco, 1 negro, 2 blanco
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 4),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+
+                // 1 blanco, 1 negro, 2 blancos, 6 rojos, 4 blancos, 1 negro, 1 blanco
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 6),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 1),
+
+                // 1 blanco, 1 negro, 1 blanco, 2 rojos, 4 blancos, 2 rojos, 3 blancos, 1 negro, 1 blanco
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 3),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 1),
+
+                // 1 negro, 3 rojos, 6 blancos, 5 rojos, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorRojo, 3),
+                ...repetirBloque(colorBlanco, 6),
+                ...repetirBloque(colorRojo, 5),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 negro, 3 rojos, 6 blancos, 2 rojos, 2 blancos, 1 rojo, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorRojo, 3),
+                ...repetirBloque(colorBlanco, 6),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 1),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 negro, 1 blanco, 2 rojos, 6 blancos, 1 rojo, 4 blancos, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 6),
+                ...repetirBloque(colorRojo, 1),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 negro, 2 blancos, 2 rojos, 4 blancos, 2 rojos, 4 blancos, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 negro, 2 blancos, 9 rojos, 2 blancos, 1 rojo, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 9),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorRojo, 1),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 negro, 1 blanco, 2 rojos, 8 negros, 3 rojos, 1 negro
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorRojo, 2),
+                ...repetirBloque(colorNegro, 8),
+                ...repetirBloque(colorRojo, 3),
+                ...repetirBloque(colorNegro, 1),
+
+                // 1 blanco, 3 negros, 2 blancos, 1 negro, 2 blancos, 1 negro, 2 blancos, 3 negros, 1 blanco
+                ...repetirBloque(colorBlanco, 1),
+                ...repetirBloque(colorNegro, 3),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 3),
+                ...repetirBloque(colorBlanco, 1),
+
+                // 2 blancos, 1 negro, 3 blancos, 1 negro, 2 blancos, 1 negro, 3 blancos, 1 negro, 2 blancos
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 3),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 3),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+
+                // 2 blancos, 1 negro, 10 blancos, 1 negro, 2 blancos
+                ...repetirBloque(colorBlanco, 2),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 10),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 2),
+
+                // 3 blancos, 1 negro, 8 blancos, 1 negro, 3 blancos
+                ...repetirBloque(colorBlanco, 3),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 8),
+                ...repetirBloque(colorNegro, 1),
+                ...repetirBloque(colorBlanco, 3),
+
+                // 4 blancos, 8 negros, 4 blancos
+                ...repetirBloque(colorBlanco, 4),
+                ...repetirBloque(colorNegro, 8),
+                ...repetirBloque(colorBlanco, 4)
+            ];
+            //------------------FIN DE CODIGO-------------------------
+
+
+            // --------CODIGO PARA EL PISO------
+            var verticesTriangulo = [
+                // FILA 1
+                // Cuadrado 1
+                -1, -1,
+                -1, -0.8,
+                -0.8, -0.8,
+                -1, -1,
+                -0.8, -0.8,
+                -0.8, -1,
+
+                // Cuadrado 2
+                -0.8, -1,
+                -0.8, -0.8,
+                -0.6, -0.8,
+                -0.8, -1,
+                -0.6, -0.8,
+                -0.6, -1,
+
+                // Cuadrado 3
+                -0.6, -1,
+                -0.6, -0.8,
+                -0.4, -0.8,
+                -0.6, -1,
+                -0.4, -0.8,
+                -0.4, -1,
+
+                // Cuadrado 4
+                -0.4, -1,
+                -0.4, -0.8,
+                -0.2, -0.8,
+                -0.4, -1,
+                -0.2, -0.8,
+                -0.2, -1,
+
+                // Cuadrado 5
+                -0.2, -1,
+                -0.2, -0.8,
+                0, -0.8,
+                -0.2, -1,
+                0, -0.8,
+                0, -1,
+
+                // Cuadrado 6
+                0, -1,
+                0, -0.8,
+                0.2, -0.8,
+                0, -1,
+                0.2, -0.8,
+                0.2, -1,
+
+                // Cuadrado 7
+                0.2, -1,
+                0.2, -0.8,
+                0.4, -0.8,
+                0.2, -1,
+                0.4, -0.8,
+                0.4, -1,
+
+                // Cuadrado 8
+                0.4, -1,
+                0.4, -0.8,
+                0.6, -0.8,
+                0.4, -1,
+                0.6, -0.8,
+                0.6, -1,
+
+                // Cuadrado 9
+                0.6, -1,
+                0.6, -0.8,
+                0.8, -0.8,
+                0.6, -1,
+                0.8, -0.8,
+                0.8, -1,
+
+                // Cuadrado 10
+                0.8, -1,
+                0.8, -0.8,
+                1, -0.8,
+                0.8, -1,
+                1, -0.8,
+                1, -1,
+
+            ];
+
+            var coloresTriangulo = [
+                // Azul claro (Light Sky Blue)
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+
+                // Azul medio (Sky Blue)
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+
+                // Azul oscuro (Steel Blue)
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+
+                // Azul marino (Navy)
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+
+                // Azul pastel (Light Blue)
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+
+                // Azul celeste (Azure)
+                0.0, 0.5, 1.0, 1,
+                0.0, 0.5, 1.0, 1,
+                0.0, 0.5, 1.0, 1,
+                0.0, 0.5, 1.0, 1,
+
+                // Azul grisáceo (Slate Blue)
+                0.42, 0.35, 0.8, 1,
+                0.42, 0.35, 0.8, 1,
+                0.42, 0.35, 0.8, 1,
+                0.42, 0.35, 0.8, 1,
+
+                // Azul hielo (Ice Blue)
+                0.66, 0.76, 0.9, 1,
+                0.66, 0.76, 0.9, 1,
+                0.66, 0.76, 0.9, 1,
+                0.66, 0.76, 0.9, 1,
+
+                // Azul medianoche (Midnight Blue)
+                0.1, 0.2, 0.4, 1,
+                0.1, 0.2, 0.4, 1,
+                0.1, 0.2, 0.4, 1,
+                0.1, 0.2, 0.4, 1,
+
+                // Azul acero (Cadet Blue)
+                0.37, 0.62, 0.63, 1,
+                0.37, 0.62, 0.63, 1,
+                0.37, 0.62, 0.63, 1,
+                0.37, 0.62, 0.63, 1,
+
+                // Azul claro (Light Sky Blue)
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+                0.68, 0.85, 0.9, 1,
+
+                // Azul medio (Sky Blue)
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+                0.53, 0.81, 0.92, 1,
+
+                // Azul oscuro (Steel Blue)
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+                0.0, 0.5, 0.75, 1,
+
+                // Azul marino (Navy)
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+                0.0, 0.0, 0.5, 1,
+
+                // Azul pastel (Light Blue)
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+                0.6, 0.8, 0.94, 1,
+
+            ];
+            //------------FIN DE CODIGO----------
+
+            //-------CODIGO PARA EL ZORRO
+            var verticesZorro = [
+                // Triángulo para TRIANGLES
+
+                //CUERPO
+                0.1, -0.9,
+                0.5, -0.9,
+                0.3, -0.6,
+
+                0.5, -0.9,
+                0.3, -0.6,
+                0.7, -0.6,
+
+                0.5, -0.9,
+                0.7, -0.6,
+                0.9, -0.9,
+
+                //COLA
+                0.79, -0.74,
+                1, -0.6,
+                0.9, -0.9,
+
+                //CABEZA
+                0.4, -0.6,
+                0.6, -0.6,
+                0.5, -0.4,
+
+                0.4, -0.6,
+                0.4, -0.4,
+                0.5, -0.4,
+
+                0.6, -0.4,
+                0.6, -0.6,
+                0.5, -0.4,
+
+                0.2, -0.4,
+                0.4, -0.6,
+                0.4, -0.4,
+
+                0.6, -0.4,
+                0.6, -0.6,
+                0.8, -0.4,
+
+                0.4, -0.4,
+                0.5, -0.3,
+                0.6, - 0.4,
+
+                0.2, -0.4,
+                0.3, -0.2,
+                0.4, -0.4,
+
+                0.6, -0.4,
+                0.7, -0.2,
+                0.8, -0.4,
+
+                0.5, -0.3,
+                0.4, -0.1,
+                0.6, -0.1,
+
+                0.3, -0.2,
+                0.4, -0.1,
+                0.5, -0.3,
+
+                0.5, -0.3,
+                0.6, -0.1,
+                0.7, -0.2,
+
+                0.3, -0.2,
+                0.4, -0.4,
+                0.5, -0.3,
+
+                0.5, -0.3,
+                0.7, -0.2,
+                0.6, -0.4,
+
+                0.2, 0,
+                0.3, -0.2,
+                0.4, -0.1,
+
+                0.2, 0,
+                0.2, -0.4,
+                0.3, -0.2,
+
+                0.6, -0.1,
+                0.8, 0,
+                0.7, -0.2,
+
+                0.8, 0,
+                0.7, -0.2,
+                0.8, -0.4,
+
+                //nariz
+                0.5, -0.54,
+                0.44, -0.6,
+                0.56, -0.6,
+
+                //ojo i
+                0.34, -0.4,
+                0.4, -0.46,
+                0.4, -0.4,
+
+
+                //ojo d
+                0.6, -0.4,
+                0.6, -0.46,
+                0.66, -0.4
+
+
+
+            ];
+
+            var coloresZorro = [
+
+                0.96, 0.69, 0.25, 1,  // Color 245, 176, 65
+                0.96, 0.69, 0.25, 1,  // Color 245, 176, 65
+                0.96, 0.69, 0.25, 1, // Color 245, 176, 65
+
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+
+                0.96, 0.69, 0.25, 1,  // Color 245, 176, 65
+                0.96, 0.69, 0.25, 1,  // Color 245, 176, 65
+                0.96, 0.69, 0.25, 1,   // Color 245, 176, 65
+
+                0.4627, 0.1725, 0, 1,  // Color #752C00
+                0.4627, 0.1725, 0, 1,  // Color #752C00
+                0.4627, 0.1725, 0, 1,   // Color #752C00
+
+                0.4627, 0.1725, 0, 1,  // Color #752C00
+                0.4627, 0.1725, 0, 1,  // Color #752C00
+                0.4627, 0.1725, 0, 1,  // Color #752C00
+
+                1, 0.604, 0.361, 1,
+                1, 0.604, 0.361, 1,
+                1, 0.604, 0.361, 1,
+
+                1, 0.604, 0.361, 1,
+                1, 0.604, 0.361, 1,
+                1, 0.604, 0.361, 1,
+
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+                1, 0.94, 0.9, 1,  // Color #FFEFE6
+
+                1, 0.380, 0, 1,  // Naranja intenso
+                1, 0.380, 0, 1,  // Naranja intenso
+                1, 0.380, 0, 1,  // Naranja intenso
+
+                1, 0.490, 0.180, 1,  // Naranja suave
+                1, 0.490, 0.180, 1,  // Naranja suave
+                1, 0.490, 0.180, 1,  // Naranja suave
+
+                1, 0.490, 0.180, 1,  // Naranja suave
+                1, 0.490, 0.180, 1,  // Naranja suave
+                1, 0.490, 0.180, 1,  // Naranja suave
+
+                0.459, 0.250, 0.000, 1,  // Marrón oscuro
+                0.459, 0.250, 0.000, 1,  // Marrón oscuro
+                0.459, 0.250, 0.000, 1,  // Marrón oscuro
+
+
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+                0.820, 0.451, 0.000, 1,  // Naranja
+
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+                0.106, 0.047, 0.008, 1,  // Marrón oscuro
+
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+                0, 0, 0, 1,  // Negro
+            ];
+            //---------FIN DE CODIGO ZORRO---------
+
+            //------CODIGO PARA  CAPTUS-----------
+            var verticesCaptus = [
+
+                0.2, -0.7, // b
+                0.2, -0.8, // a
+                0.6, -0.8, // d
+
+                0.2, -0.7, // b
+                0.6, -0.8, // d
+                0.6, -0.7,  // c
+
+                0.1, -0.6, // f
+                0.1, -0.7, // e
+                0.7, -0.7, // h
+
+                0.1, -0.6, // f
+                0.7, -0.7, // h
+                0.7, -0.6,  // g
+
+                0.3, -0.6, // j
+                0.5, -0.6, // i
+                0.6, -0.5,  // k
+
+                0.3, -0.3, // l
+                0.3, -0.6, // j
+                0.6, -0.5, // k
+
+                0.3, -0.3, // l
+                0.1, -0.4, // m
+                0.3, -0.6, // j
+
+                0.3, -0.3, // l
+                0.5, -0.3, // n
+                0.6, -0.5,  // k
+
+                0.5, -0.3, // n
+                0.6, -0.5, // k
+                0.8, -0.4, // o
+
+                0.5, -0.3,  // n
+                0.6, -0.1,  // p
+                0.8, -0.4,  // o
+
+                0.6, -0.1,  // p
+                0.8, 0.0,   // s
+                0.8, -0.4,  // o
+
+                0.3, -0.3,  // l
+                0.6, -0.1,  // p
+                0.5, -0.3,  // n
+
+                0.1, -0.1,  // t
+                0.1, -0.4,  // m
+                0.3, -0.3,  // l
+
+                0.3, -0.3,  // l
+                0.6, -0.1,  // p
+                0.3, 0.1,  // q
+
+                0.3, 0.1,  // q
+                0.6, -0.1,  // r
+                0.6, 0.2   // p
+
+            ];
+
+            var coloresCaptus = [
+
+                0.177, 0.149, 0.047, 1,  // #2D260C
+                0.177, 0.149, 0.047, 1,  // #2D260C
+                0.177, 0.149, 0.047, 1,  // #2D260C
+
+                0.333, 0.259, 0.055, 1,  // #55420E
+                0.333, 0.259, 0.055, 1,  // #55420E
+                0.333, 0.259, 0.055, 1,  // #55420E
+
+                0.278, 0.153, 0.000, 1,  // #472700
+                0.278, 0.153, 0.000, 1,  // #472700
+                0.278, 0.153, 0.000, 1,  // #472700
+
+                0.557, 0.278, 0.000, 1,  // #8E4700
+                0.557, 0.278, 0.000, 1,  // #8E4700
+                0.557, 0.278, 0.000, 1,  // #8E4700
+
+                0.431, 0.729, 0.427, 1,  // #6EB96D
+                0.431, 0.729, 0.427, 1,  // #6EB96D
+                0.431, 0.729, 0.427, 1,  // #6EB96D
+
+                0.003, 0.216, 0.020, 1,  // #093707
+                0.003, 0.216, 0.020, 1,  // #093707
+                0.003, 0.216, 0.020, 1,  // #093707
+
+                0.306, 0.478, 0.298, 1,  // #4E7A4C
+                0.306, 0.478, 0.298, 1,  // #4E7A4C
+                0.306, 0.478, 0.298, 1,  // #4E7A4C
+
+                0.188, 0.278, 0.000, 1,  // #304700
+                0.188, 0.278, 0.000, 1,  // #304700
+                0.188, 0.278, 0.000, 1,  // #304700
+
+                0.078, 0.290, 0.184, 1,  // #144A2F
+                0.078, 0.290, 0.184, 1,  // #144A2F
+                0.078, 0.290, 0.184, 1,  // #144A2F
+
+                0.055, 0.235, 0.129, 1,  // #0E3C21
+                0.055, 0.235, 0.129, 1,  // #0E3C21
+                0.055, 0.235, 0.129, 1,  // #0E3C21
+
+                0.1, 0.28, 0, 1,  // #014700
+                0.1, 0.28, 0, 1,  // #014700
+                0.1, 0.28, 0, 1,  // #014700
+
+                0.45, 0.75, 0.41, 1,  // #72C069
+                0.45, 0.75, 0.41, 1,  // #72C069
+                0.45, 0.75, 0.41, 1,  // #72C069
+
+                0.45, 0.75, 0.41, 1,  // #72C069
+                0.45, 0.75, 0.41, 1,  // #72C069
+                0.45, 0.75, 0.41, 1,  // #72C069
+
+                0.41, 0.88, 0.67, 1,  // #69E1AC
+                0.41, 0.88, 0.67, 1,  // #69E1AC
+                0.41, 0.88, 0.67, 1,  // #69E1AC
+
+                0, 0.5, 0.38, 1,  // #007F62
+                0, 0.5, 0.38, 1,  // #007F62
+                0, 0.5, 0.38, 1,  // #007F62
+
+            ];
+            //------FIN DE CODIGO PARA CAPTUS------
+
+
+            //----------CODIGO PARA LA LINEA--------
+
+            var verticesLineas = [
+                -1.0, 0.2,   // A
+                -0.9, 0.2,   // B
+                -0.9, 0.3,   // C
+                -0.8, 0.3,   // D
+                -0.8, 0.2,   // E
+                -0.7, 0.2,   // F
+                -0.7, 0.3,   // G
+                -0.6, 0.3,   // H
+                -0.6, 0.2,   // I
+                -0.5, 0.2,   // J
+                -0.5, 0.3,   // K
+                -0.4, 0.3,   // L
+                -0.4, 0.2,   // M
+                -0.3, 0.2,   // N
+                -0.3, 0.3,   // O
+                -0.2, 0.3,   // P
+                -0.2, 0.2,   // Q
+                -0.1, 0.2,   // R
+                -0.1, 0.3,   // S
+                0.0, 0.3,    // T
+                0.0, 0.2,    // U
+                0.1, 0.2,    // V
+                0.1, 0.3,    // W
+                0.2, 0.3,    // Z
+                0.2, 0.2,    // A_1
+                0.3, 0.2,    // B_1
+                0.3, 0.3,    // C_1
+                0.4, 0.3,    // D_1
+                0.4, 0.2,    // E_1
+                0.5, 0.2,    // F_1
+                0.5, 0.3,    // G_1
+                0.6, 0.3,    // H_1
+                0.6, 0.2,    // I_1
+                0.7, 0.2,    // J_1
+                0.7, 0.3,    // K_1
+                0.8, 0.3,    // L_1
+                0.8, 0.2,    // M_1
+                0.9, 0.2,    // N_1
+                0.9, 0.3,    // O_1
+                1.0, 0.3,    // P_1
+                1.0, 0.2     // Q_1
+            ];
+
+            var coloresLineas = [
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+                0.627, 0.251, 0.0, 1.0,
+            ];
+            //--------FIN DE CODIGO PARA LA LINEA--------
+
+            //-----------CODIGO CIRCULOS-------------
+            // Define los vértices y colores para los círculos
+            var circuloVertices = [];
+            var circuloColores = [];
+            var numSegments = 30; // Número de segmentos para aproximar el círculo
+            var radius = 0.05; // Radio de los círculos
+            var center1 = [-0.85, 0.25]; // Centro del primer círculo
+            var center2 = [0.05, 0.25]; // Centro del segundo círculo
+            var center3 = [0.85, 0.25]; // Centro del tercer círculo
+
+            // Genera los vértices y colores para el primer círculo
+            for (var i = 0; i < numSegments; i++) {
+                var theta = 2.0 * Math.PI * i / numSegments;
+                var x = center1[0] + radius * Math.cos(theta);
+                var y = center1[1] + radius * Math.sin(theta);
+                circuloVertices.push(center1[0], center1[1]); // Vértice central
+                circuloVertices.push(x, y); // Vértice del borde
+
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+            }
+
+            // Genera los vértices y colores para el segundo círculo
+            for (var i = 0; i < numSegments; i++) {
+                var theta = 2.0 * Math.PI * i / numSegments;
+                var x = center2[0] + radius * Math.cos(theta);
+                var y = center2[1] + radius * Math.sin(theta);
+                circuloVertices.push(center2[0], center2[1]); // Vértice central
+                circuloVertices.push(x, y); // Vértice del borde
+
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+            }
+
+            for (var i = 0; i < numSegments; i++) {
+                var theta = 2.0 * Math.PI * i / numSegments;
+                var x = center3[0] + radius * Math.cos(theta);
+                var y = center3[1] + radius * Math.sin(theta);
+                circuloVertices.push(center3[0], center3[1]); // Vértice central
+                circuloVertices.push(x, y); // Vértice del borde
+
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+                circuloColores.push(1.0, 0.341, 0.200, 1.0);
+            }
+
+
+            // -----CREA OBJETO PARA EL HONGO----
+            var cuadradoVAO = gl.createVertexArray();
+            gl.bindVertexArray(cuadradoVAO);
+
+            var codigoVertices = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVertices);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores y carga los datos en él
+            var codigoColores = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColores);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colores), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //------------------FIN DE OBJETO CUADRADO------------------
+
+
+            //------------CREA OBJETO PARA PISO---------------- 
+            var trianguloVAO = gl.createVertexArray();
+            gl.bindVertexArray(trianguloVAO);
+
+            // Crea un buffer para los vértices del triángulo y carga los datos en él
+            var codigoVerticesTriangulo = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVerticesTriangulo);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesTriangulo), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores del triángulo y carga los datos en él
+            var codigoColoresTriangulo = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColoresTriangulo);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coloresTriangulo), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //-------------FIN DE CODIGO-------------------------
+
+
+            //------------CREA OBJETOS PARA EL ZORRO---------------- 
+            var zorroVAO = gl.createVertexArray();
+            gl.bindVertexArray(zorroVAO);
+
+            // Crea un buffer para los vértices del triángulo y carga los datos en él
+            var codigoVerticesZorro = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVerticesZorro);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesZorro), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores del triángulo y carga los datos en él
+            var codigoColoresZorro = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColoresZorro);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coloresZorro), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //-------------FIN DE CODIGO-------------------------
+
+            //------------CREA OBJETOS PARA EL CAPTUS---------------- 
+            var captusVAO = gl.createVertexArray();
+            gl.bindVertexArray(captusVAO);
+
+            // Crea un buffer para los vértices del triángulo y carga los datos en él
+            var codigoVerticesCaptus = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVerticesCaptus);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesCaptus), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores del triángulo y carga los datos en él
+            var codigoColoresCaptus = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColoresCaptus);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coloresCaptus), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //-------------FIN DE CODIGO-------------------------
+
+            //------------CREA OBJETOS PARA LINEAS---------------- 
+            var lineasVAO = gl.createVertexArray();
+            gl.bindVertexArray(lineasVAO);
+
+            // Crea un buffer para los vértices del triángulo y carga los datos en él
+            var codigoVerticesLineas = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVerticesLineas);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verticesLineas), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores del triángulo y carga los datos en él
+            var codigoColoresLineas = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColoresLineas);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coloresLineas), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //-------------FIN DE CODIGO-------------------------
+
+            //------------CREA OBJETOS PARA CIRCULO---------------- 
+            var circuloVAO = gl.createVertexArray();
+            gl.bindVertexArray(circuloVAO);
+
+            // Crea un buffer para los vértices del triángulo y carga los datos en él
+            var codigoVerticesCirculo = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoVerticesCirculo);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(circuloVertices), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+            // Crea un buffer para los colores del triángulo y carga los datos en él
+            var codigoColoresCirculo = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, codigoColoresCirculo);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(circuloColores), gl.STATIC_DRAW);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            //-------------FIN DE CODIGO-------------------------
+
+
+
+
+
+
+            // Limpia el VAO y el buffer para evitar interferencias
+            gl.bindVertexArray(null);
+            gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+            // Usa el programa de shaders
+            gl.useProgram(programaID);
+
+
+            // Obtiene las ubicaciones de los uniform en el programa de shaders
+            uMatrizProyeccion = gl.getUniformLocation(programaID, "uMatrizProyeccion");
+            uMatrizVista = gl.getUniformLocation(programaID, "uMatrizVista");
+            uMatrizModelo = gl.getUniformLocation(programaID, "uMatrizModelo");
+
+
+            // Configura el color de fondo del canvas
+            gl.clearColor(0.84, 0.92, 0.97, 1);  // #D6EAF8
+
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+
+            identidad(MatrizProyeccion);
+            gl.uniformMatrix4fv(uMatrizProyeccion, false, MatrizProyeccion);
+            identidad(MatrizVista);
+            gl.uniformMatrix4fv(uMatrizVista, false, MatrizVista);
+
+            //------MATRICES PARA EL HONGO----
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.8, 0.8, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.6, 0.5, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.39, 0.8, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.2, 0.5, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.0, 0.8, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -0.2, 0.5, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, 0.2, 0.5, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, 0.4, 0.8, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, 0.6, 0.5, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, 0.8, 0.8, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(cuadradoVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 1536);
+
+            //---------------FIN DE CODIGO----------------------
+
+
+
+            //---------------CODIGO MATRICES PARA EL PISO----------------
+            identidad(MatrizModelo);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(trianguloVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 240);
+            // FIN CODIGO PARA EL PISO
+
+            //---------------CODIGO MATRICES PARA EL ZORRO----------------
+            identidad(MatrizModelo);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(zorroVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 72);
+            // FIN CODIGO PARA EL PISO
+
+            //---------------CODIGO MATRICES PARA EL CAPTUS----------------
+            identidad(MatrizModelo);
+            traslacion(MatrizModelo, -1, 0, 0);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(captusVAO);
+            gl.drawArrays(gl.TRIANGLES, 0, 45);
+            // --------------FIN CODIGO-------------------------
+
+
+            //---------------CODIGO MATRICES PARA LINEAS----------------
+            identidad(MatrizModelo);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(lineasVAO);
+
+            gl.drawArrays(gl.LINE_STRIP, 0, 40);
+            // --------------FIN CODIGO-------------------------
+
+
+            //---------------CODIGO MATRICES PARA CIRCULOS----------------
+            identidad(MatrizModelo);
+            gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+            gl.bindVertexArray(circuloVAO);
+
+            gl.drawArrays(gl.TRIANGLES, 0, circuloVertices.length / 2);
+            // --------------FIN CODIGO-------------------------
+
+            gl.bindVertexArray(null);
+        }
+
+        // Ejecuta la función main cuando la ventana se carga
+        window.onload = main;
+    </script>
+</body>
+
+</html>
