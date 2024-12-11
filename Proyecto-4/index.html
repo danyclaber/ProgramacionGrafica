@@ -1,0 +1,1627 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <title>Sprites en WebGL 2.0</title>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+</head>
+
+<style>
+  /* Asegura que el canvas ocupe toda la pantalla */
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #canvas-holder {
+    width: 100%;
+    height: 100%;
+  }
+
+  #webglcanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+</style>
+
+<body>
+  <div id="content">
+    <!-- <h2 id="headline">Laboratorio-5</h2> -->
+
+    <div id="canvas-holder">
+      <canvas id="webglcanvas"></canvas>
+      <img src="img/hyrule.webp" id="imagen1" hidden />
+      <img src="img/zelda.png" id="imagen2" hidden />
+      <img src="img/guerrero.png" id="imagen3" hidden />
+      <img src="img/mago.png" id="imagen4" hidden />
+      <img src="img/bruja.png" id="imagen5" hidden />
+      <img src="img/explosion.png" id="imagen6" hidden />
+      <img src="img/gato.png" id="imagen7" hidden />
+      <img src="img/princesa.png" id="imagen8" hidden />
+      <img src="img/roca.png" id="imagen9" hidden />
+
+      <img src="img/maga.png" id="imagen10" hidden />
+      <img src="img/picaro.png" id="imagen11" hidden />
+      <img src="img/sacerdote.png" id="imagen12" hidden />
+
+
+
+
+
+
+    </div>
+  </div>
+  <!--
+        /***************************************************************************/
+        /* Paso 1: Se definen los códigos shaders.                                 */
+        /***************************************************************************/
+      -->
+  <script id="vs" type="vertex">
+        #version 300 es
+        precision mediump float;
+        uniform mat4 uMatrizProyeccion;
+        uniform mat4 uMatrizVista;
+        uniform mat4 uMatrizModelo;
+        uniform mat4 uMatrizTextura;
+        layout(location = 0) in vec2 aVertices;
+        layout(location = 1) in vec2 aCoordenadasDeTextura;
+        out vec2 vCoordenadasDeTextura;
+        void main() {
+            vCoordenadasDeTextura = (uMatrizTextura * vec4(aCoordenadasDeTextura, 0.0, 1.0)).xy;
+            gl_Position = uMatrizProyeccion * uMatrizVista * uMatrizModelo * vec4(aVertices, 0.0, 1.0);
+        }
+      </script>
+
+  <script id="fs" type="fragment">
+        #version 300 es
+        precision mediump float;
+        uniform sampler2D uUnidadDeTextura;
+        in vec2 vCoordenadasDeTextura;
+        out vec4 color;
+        void main() {
+            color = texture(uUnidadDeTextura, vCoordenadasDeTextura); 
+        }
+      </script>
+
+  <script>
+    "use strict";
+
+    /* Variables globales */
+    var canvas, gl;
+    var programaID;
+
+    //fondo
+    var textura1;
+    var codigo1;
+
+    //zelda
+    var textura2;
+    var codigo2;
+
+    //guerrero calavera
+    var textura3;
+    var codigo3;
+
+    //mago calavera
+    var textura4;
+    var codigo4;
+
+    //bruja calavera
+    var textura5;
+    var codigo5;
+
+    //explosion
+    var textura6;
+    var codigo6;
+
+    //gato
+    var textura7;
+    var codigo7;
+
+    //princesa
+    var textura8;
+    var codigo8;
+
+    //roca 1
+    var textura9;
+    var codigo9;
+
+    //roca 2
+    var textura10;
+    var codigo10;
+
+    //roca 3
+    var textura11;
+    var codigo11;
+
+    //roca 4
+    var textura12;
+    var codigo12;
+
+    //roca 5
+    var textura13;
+    var codigo13;
+
+    //roca 6
+    var textura14;
+    var codigo14;
+
+    //roca 7
+    var textura15;
+    var codigo15;
+
+    //maga
+    var textura16;
+    var codigo16;
+
+    //picaro
+    var textura17;
+    var codigo17;
+
+    //sacerdote
+    var textura18;
+    var codigo18;
+
+
+    /* Variables Uniformes */
+    var uMatrizProyeccion;
+    var uMatrizVista;
+    var uMatrizModelo;
+    var uUnidadDeTextura;
+    var uMatrizTextura;
+
+    /* Matrices */
+    var MatrizProyeccion = new Array(16);
+    var MatrizVista = new Array(16);
+    var MatrizModelo = new Array(16);
+    var MatrizTextura = new Array(16);
+
+    /*Movimiento Enemigo1(Guerrero) y Zelda*/
+    const PERIODO_MOVIMIENTO = 0.15; // Tiempo entre movimientos
+    let direccion = 1; // 1 para moverse a la derecha, -1 para moverse a la izquierda
+    let tiempoMovimiento = PERIODO_MOVIMIENTO;
+    let tiempoAnterior = Date.now();
+
+    /*Movimiento Enemigo2(Mago)*/
+    const PERIODO_MOVIMIENTO_MAGO = 0.15; // Tiempo entre movimientos
+    let direccionMago = 1;
+    let tiempoMovimientoMago = PERIODO_MOVIMIENTO_MAGO;
+    let tiempoAnteriorMago = Date.now();
+
+    /*Movimiento Enemigo3(Bruja)*/
+    const PERIODO_MOVIMIENTO_BRUJA = 0.15; // Tiempo entre movimientos
+    let direccionBruja = 1;
+    let tiempoMovimientoBruja = PERIODO_MOVIMIENTO_BRUJA;
+    let tiempoAnteriorBruja = Date.now();
+
+    /*Movimiento Enemigo4(Maga)*/
+    const PERIODO_MOVIMIENTO_MAGA = 0.15; // Tiempo entre movimientos
+    let direccionMaga = 1;
+    let tiempoMovimientoMaga = PERIODO_MOVIMIENTO_MAGA;
+    let tiempoAnteriorMaga = Date.now();
+
+    /*Movimiento Enemigo5(Picaro)*/
+    const PERIODO_MOVIMIENTO_PICARO = 0.15; // Tiempo entre movimientos
+    let direccionPicaro = 1;
+    let tiempoMovimientoPicaro = PERIODO_MOVIMIENTO_PICARO;
+    let tiempoAnteriorPicaro = Date.now();
+
+    /*Movimiento Enemigo6(Sacerdote)*/
+    const PERIODO_MOVIMIENTO_SACERDOTE = 0.15; // Tiempo entre movimientos
+    let direccionSacerdote = 1;
+    let tiempoMovimientoSacerdote = PERIODO_MOVIMIENTO_SACERDOTE;
+    let tiempoAnteriorSacerdote = Date.now();
+
+
+
+
+    /*Gato*/
+    const PERIODO_MOVIMIENTO_GATO = 0.15; // Tiempo entre movimientos
+    let direccionGato = 1;
+    let tiempoMovimientoGato = PERIODO_MOVIMIENTO_GATO;
+    let tiempoAnteriorGato = Date.now();
+
+    /*Gato a Princesa*/
+    const PERIODO_MOVIMIENTO_PRINCESA = 0.5; // Tiempo entre movimientos
+    let direccionPrincesa = 1;
+    let tiempoMovimientoPrincesa = PERIODO_MOVIMIENTO_PRINCESA;
+    let tiempoAnteriorPrincesa = Date.now();
+
+
+    /**
+     *  Coordenadas de Textura
+     *
+     *    1------------
+     *     |          |
+     *     |          |
+     *  4  |          |
+     *     |          |
+     *     ------------
+     *   0,0          1
+     *          4
+     *
+     */
+
+    /* Para la traslación de la textura */
+
+    /*zelda translacion*/
+    var despX_Textura = 0;
+    var despY_Textura = 7 / 8;
+    var incX = 0;
+    var incY = 0;
+    var despX = -1.5;
+    var despY = 7;
+
+    /*enemigo1 calavera guerrero translacion*/
+    var despX_TexturaGuerrero = 0;
+    var despY_TexturaGuerrero = 3 / 8;
+    var despX_Guerrero = 8;
+    var despY_Guerrero = 4;
+
+    /*enemigo2 calavera mago translacion*/
+    var despX_TexturaMago = 0;
+    var despY_TexturaMago = 3 / 4;
+    var despX_Mago = 7;
+    var despY_Mago = 5;
+
+    /*enemigo3 bruja translacion*/
+    var despX_TexturaBruja = 0;
+    var despY_TexturaBruja = 3 / 4;
+    var despX_Bruja = 6;
+    var despY_Bruja = 4;
+
+    /*enemigo4 maga translacion*/
+    var despX_TexturaMaga = 0;
+    var despY_TexturaMaga = 3 / 4;
+    var despX_Maga = 6;
+    var despY_Maga = 4;
+
+    /*enemigo5 picaro translacion*/
+    var despX_TexturaPicaro = 0;
+    var despY_TexturaPicaro = 3 / 4;
+    var despX_Picaro = 6;
+    var despY_Picaro = 0;
+
+    /*enemigo6 sacerdote translacion*/
+    var despX_TexturaSacerdote = 0;
+    var despY_TexturaSacerdote = 3 / 4;
+    var despX_Sacerdote = 0;
+    var despY_Sacerdote = 2;
+
+
+    /*explosion*/
+    var despX_TexturaExplosion = 0;
+    var despY_TexturaExplosion = 2 / 5;
+    var despX_Explosion = 3;
+    var despY_Explosion = 3;
+
+    /*gato*/
+    var despX_TexturaGato = 0;
+    var despY_TexturaGato = 6 / 8;
+    var despX_Gato = 4;
+    var despY_Gato = 2;
+
+    /*princesa*/
+    var despX_TexturaPrincesa = 0;
+    var despY_TexturaPrincesa = 1 / 3;
+    var despX_Princesa = 3;
+    var despY_Princesa = 4;
+
+    /*roca*/
+    var despX_TexturaRoca = 0;
+    var despY_TexturaRoca = 1;
+    var despX_Roca = 2.5;
+    var despY_Roca = 7;
+
+    /***************************************************************************/
+    /* Paso 2: Se crean, compilan y enlazan los programas Shader               */
+    /***************************************************************************/
+    function compilaEnlazaLosShaders() {
+
+      /* Se compila el shader de vertice */
+      var shaderDeVertice = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(shaderDeVertice, document.getElementById("vs").text.trim());
+      gl.compileShader(shaderDeVertice);
+      if (!gl.getShaderParameter(shaderDeVertice, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shaderDeVertice));
+      }
+
+      /* Se compila el shader de fragmento */
+      var shaderDeFragmento = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(shaderDeFragmento, document.getElementById("fs").text.trim());
+      gl.compileShader(shaderDeFragmento);
+      if (!gl.getShaderParameter(shaderDeFragmento, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shaderDeFragmento));
+      }
+
+      /* Se enlaza ambos shader */
+      programaID = gl.createProgram();
+      gl.attachShader(programaID, shaderDeVertice);
+      gl.attachShader(programaID, shaderDeFragmento);
+      gl.linkProgram(programaID);
+      if (!gl.getProgramParameter(programaID, gl.LINK_STATUS)) {
+        console.error(gl.getProgramInfoLog(programaID));
+      }
+
+      /* Se instala el programa de shaders para utilizarlo */
+      gl.useProgram(programaID);
+    }
+
+    /***************************************************************************/
+    /* Transformaciones mediante matrices                                      */
+    /***************************************************************************/
+
+    /* Convierte de grados a radianes */
+    function toRadians(grados) {
+      return grados * Math.PI / 180;
+    };
+
+    /* Matriz Identidad */
+    function identidad(r) {
+      r[0] = 1; r[4] = 0; r[8] = 0; r[12] = 0;
+      r[1] = 0; r[5] = 1; r[9] = 0; r[13] = 0;
+      r[2] = 0; r[6] = 0; r[10] = 1; r[14] = 0;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+    }
+
+    /* Traslación - glTranslatef */
+    function traslacion(matriz, tx, ty, tz) {
+      var r = new Array(16);
+      r[0] = 1; r[4] = 0; r[8] = 0; r[12] = tx;
+      r[1] = 0; r[5] = 1; r[9] = 0; r[13] = ty;
+      r[2] = 0; r[6] = 0; r[10] = 1; r[14] = tz;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+      multiplica(matriz, matriz, r);
+    }
+
+    /* Escalación - glScalef */
+    function escalacion(matriz, sx, sy, sz) {
+      var r = new Array(16);
+      r[0] = sx; r[4] = 0; r[8] = 0; r[12] = 0;
+      r[1] = 0; r[5] = sy; r[9] = 0; r[13] = 0;
+      r[2] = 0; r[6] = 0; r[10] = sz; r[14] = 0;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+      multiplica(matriz, matriz, r);
+    }
+
+    /* Rotación sobre X - glRotatef */
+    function rotacionX(matriz, theta) {
+      let r = new Array(16);
+      var c = Math.cos(toRadians(theta));
+      var s = Math.sin(toRadians(theta));
+      r[0] = 1; r[4] = 0; r[8] = 0; r[12] = 0;
+      r[1] = 0; r[5] = c; r[9] = -s; r[13] = 0;
+      r[2] = 0; r[6] = s; r[10] = c; r[14] = 0;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+      multiplica(matriz, matriz, r);
+    }
+
+    /* Rotación sobre Y - glRotatef */
+    function rotacionY(matriz, theta) {
+      let r = new Array(16);
+      var c = Math.cos(toRadians(theta));
+      var s = Math.sin(toRadians(theta));
+      r[0] = c; r[4] = 0; r[8] = s; r[12] = 0;
+      r[1] = 0; r[5] = 1; r[9] = 0; r[13] = 0;
+      r[2] = -s; r[6] = 0; r[10] = c; r[14] = 0;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+      multiplica(matriz, matriz, r);
+    }
+
+    /* Rotación sobre Z - glRotatef */
+    function rotacionZ(matriz, theta) {
+      let r = new Array(16);
+      var c = Math.cos(toRadians(theta));
+      var s = Math.sin(toRadians(theta));
+      r[0] = c; r[4] = -s; r[8] = 0; r[12] = 0;
+      r[1] = s; r[5] = c; r[9] = 0; r[13] = 0;
+      r[2] = 0; r[6] = 0; r[10] = 1; r[14] = 0;
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+      multiplica(matriz, matriz, r);
+    }
+
+    /* Proyección Paralela - glOrtho */
+    function ortho(r, izq, der, abj, arr, cerca, lejos) {
+      r[0] = 2 / (der - izq); r[4] = 0; r[8] = 0; r[12] = -(der + izq) / (der - izq);
+      r[1] = 0; r[5] = 2 / (arr - abj); r[9] = 0; r[13] = -(arr + abj) / (arr - abj);
+      r[2] = 0; r[6] = 0; r[10] = -2 / (lejos - cerca); r[14] = -(lejos + cerca) / (lejos - cerca);
+      r[3] = 0; r[7] = 0; r[11] = 0; r[15] = 1;
+    }
+
+    /* Proyección Perspectiva - glFrustum */
+    function frustum(r, izq, der, abj, arr, cerca, lejos) {
+      r[0] = 2 * cerca / (der - izq); r[4] = 0; r[8] = (der + izq) / (der - izq); r[12] = 0;
+      r[1] = 0; r[5] = 2 * cerca / (arr - abj); r[9] = (arr + abj) / (arr - abj); r[13] = 0;
+      r[2] = 0; r[6] = 0; r[10] = -(lejos + cerca) / (lejos - cerca); r[14] = -2 * lejos * cerca / (lejos - cerca);
+      r[3] = 0; r[7] = 0; r[11] = -1; r[15] = 0;
+    }
+
+    /* Proyección Perspectiva - gluPerspective */
+    function perspective(r, fovy, aspecto, cerca, lejos) {
+      var ang = fovy * 0.5;
+      var f = (Math.abs(Math.sin(toRadians(ang))) < 1e-8 ? 0 : 1) / Math.tan(toRadians(ang));
+      r[0] = f / aspecto; r[4] = 0; r[8] = 0; r[12] = 0;
+      r[1] = 0; r[5] = f; r[9] = 0; r[13] = 0;
+      r[2] = 0; r[6] = 0; r[10] = -(lejos + cerca) / (lejos - cerca); r[14] = -2.0 * lejos * cerca / (lejos - cerca);
+      r[3] = 0; r[7] = 0; r[11] = - 1.0; r[15] = 0;
+    }
+
+    /* Multiplicación de matrices de 4 x 4 */
+    function multiplica(c, a, b) {
+      let r = new Array(16);
+      let i, j, k;
+      for (i = 0; i < 4; i++) {
+        for (j = 0; j < 4; j++) {
+          let s = 0;
+          for (k = 0; k < 4; k++)
+            s = s + a[i + k * 4] * b[k + j * 4];
+          r[i + j * 4] = s;
+        }
+      }
+      for (i = 0; i < 16; i++)
+        c[i] = r[i];
+    }
+
+    class Rectangulo {
+      constructor(gl, x1, y1, x2, y2, u1, v1, u2, v2) {
+        var vertices = new Float32Array(8);
+        vertices[0] = x1; vertices[1] = y1; // 0
+        vertices[2] = x2; vertices[3] = y1; // 1
+        vertices[4] = x2; vertices[5] = y2; // 2
+        vertices[6] = x1; vertices[7] = y2; // 3
+
+        var coord_textura = new Float32Array(8);
+        coord_textura[0] = u1; coord_textura[1] = v1; // 0
+        coord_textura[2] = u2; coord_textura[3] = v1; // 1
+        coord_textura[4] = u2; coord_textura[5] = v2; // 2
+        coord_textura[6] = u1; coord_textura[7] = v2; // 3
+
+        this.rectanguloVAO = gl.createVertexArray();
+        gl.bindVertexArray(this.rectanguloVAO);
+
+        var codigoVertices = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, codigoVertices);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+        var codigoCoordenadasDeTextura = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, codigoCoordenadasDeTextura);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(coord_textura), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(1);
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindVertexArray(null);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      }
+
+      muestra(gl) {
+        gl.bindVertexArray(this.rectanguloVAO);
+        gl.drawArrays(gl.TRIANGLE_FAN, 0, 4);
+        gl.bindVertexArray(null);
+      }
+    }
+
+    function leeLaTextura(ID_del_archivo, codigoDeTextura) {
+      gl.bindTexture(gl.TEXTURE_2D, codigoDeTextura);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      let imagen = document.getElementById(ID_del_archivo);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imagen);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    }
+
+    // Verificar colisiones con enemigos
+    let colisionEnemigosDetectada = false;
+    let colisionZeldaGato = false;
+
+    const rocas = [
+      { x: despX_Roca, y: despY_Roca },
+      { x: despX_Roca, y: despY_Roca - 1 },
+      { x: despX_Roca, y: despY_Roca - 2 },
+      { x: despX_Roca - 0.5, y: despY_Roca - 4 },
+      { x: despX_Roca - 0.5, y: despY_Roca - 5 },
+      { x: despX_Roca - 0.5, y: despY_Roca - 6 },
+      { x: despX_Roca + 2, y: despY_Roca + 1 }
+    ];
+
+    function detectarColisionConRocas(x, y, ancho, alto) {
+      const anchoRoca = 1; // Ancho de la roca
+      const altoRoca = 1;  // Alto de la roca
+
+      for (let roca of rocas) {
+        const colisionX = x < roca.x - 0.3 + anchoRoca && x + ancho - 0.3 > roca.x;
+        const colisionY = y < roca.y - 0.4 + altoRoca && y + alto - 0.4 > roca.y;
+
+        if (colisionX && colisionY) {
+          return true; // Hay colisión con esta roca
+        }
+      }
+      return false; // No hay colisión con ninguna roca
+    }
+
+
+    let sonidoPerderReproducido = false; // Variable para controlar si el sonido ya se ha reproducido
+    let sonidoGanarReproducido = false;
+
+    function keyDown(event) {
+
+      // Si hay una colisión detectada, ignora las entradas del teclado
+      if (colisionEnemigosDetectada) {
+
+        // Reproducir el sonido de perder solo una vez
+        if (!sonidoPerderReproducido) {
+          sonidoPerderReproducido = true; // Marca que el sonido ya se reprodujo
+          sonidoPerder();
+        }
+        return; // Salir de la función para evitar el movimiento
+      }
+
+      if (colisionZeldaGato) {
+        if (!sonidoGanarReproducido) {
+          sonidoGanarReproducido = true; // Marca que el sonido ya se reprodujo
+          sonidoGanar();
+        }
+      }
+
+      const limiteIzquierdo = -5.5;
+      const limiteDerecho = 13;
+      const limiteInferior = 0;
+      const limiteSuperior = 9;
+
+      switch (event.keyCode) {
+        case 38: // Flecha arriba
+          if (despY < limiteSuperior && !detectarColisionConRocas(despX, despY + 0.1, 1, 1)) {
+            despX_Textura = despX_Textura + 1 / 10;
+            despY_Textura = 1 / 8;
+            despY = despY + 0.1;
+          }
+          break;
+
+        case 40: // Flecha abajo
+          if (despY > limiteInferior && !detectarColisionConRocas(despX, despY - 0.1, 1, 1)) {
+            despX_Textura = despX_Textura + 1 / 10;
+            despY_Textura = 3 / 8;
+            despY = despY - 0.1;
+          }
+          break;
+
+        case 39: // Flecha derecha
+          if (despX < limiteDerecho && !detectarColisionConRocas(despX + 0.1, despY, 1, 1)) {
+            despX_Textura = despX_Textura + 1 / 10;
+            despY_Textura = 0;
+            despX = despX + 0.1;
+          }
+          break;
+
+        case 37: // Flecha izquierda
+          if (despX > limiteIzquierdo && !detectarColisionConRocas(despX - 0.1, despY, 1, 1)) {
+            despX_Textura = despX_Textura - 1 / 10;
+            despY_Textura = 2 / 8;
+            despX = despX - 0.1;
+          }
+          break;
+
+        case 27: // 'esc'
+          window.close();
+          break;
+      }
+    }
+
+    function movimientoDerechaIzquierdaGuerrero() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnterior) / 1000.0;
+      tiempoAnterior = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimiento -= tiempoReal;
+
+      if (tiempoMovimiento < 0.001) {
+        tiempoMovimiento = PERIODO_MOVIMIENTO; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccion === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaGuerrero = despX_TexturaGuerrero + 1 / 12
+          despY_TexturaGuerrero = 1 / 8;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaGuerrero = despX_TexturaGuerrero - 1 / 12
+          despY_TexturaGuerrero = 2 / 8;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Guerrero += direccion * 0.1;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Guerrero >= 10) {
+          direccion = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Guerrero <= -1) {
+          direccion = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function movimientoAbajoArribaGuerrero() {
+      // Obtiene el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnterior) / 1000.0;
+      tiempoAnterior = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimiento -= tiempoReal;
+
+      if (tiempoMovimiento < 0.001) {
+        // Restablece el tiempo de movimiento
+        tiempoMovimiento = PERIODO_MOVIMIENTO;
+
+        // Actualiza las coordenadas de la textura según la dirección
+        if (direccion === 1) {
+          // Si se mueve hacia arriba, usa la textura correspondiente
+          despX_TexturaGuerrero = despX_TexturaGuerrero + 1 / 12;
+          despY_TexturaGuerrero = 0;
+        } else {
+          // Si se mueve hacia abajo, usa la textura correspondiente
+          despX_TexturaGuerrero = despX_TexturaGuerrero - 1 / 12;
+          despY_TexturaGuerrero = 3 / 8;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despY_Guerrero += direccion * 0.1;
+
+        // Cambia de dirección al llegar a los límites superior e inferior (9 y 0)
+        if (despY_Guerrero >= 9) {
+          direccion = -1; // Cambia para moverse hacia abajo
+        } else if (despY_Guerrero <= 0) {
+          direccion = 1; // Cambia para moverse hacia arriba
+        }
+      }
+    }
+
+    function movimientoDerechaIzquierdaMago() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorMago) / 1000.0;
+      tiempoAnteriorMago = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoMago -= tiempoReal;
+
+      if (tiempoMovimientoMago < 0.001) {
+        tiempoMovimientoMago = PERIODO_MOVIMIENTO_MAGO; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionMago === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaMago = despX_TexturaMago + 1 / 4
+          despY_TexturaMago = 1 / 4;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaMago = despX_TexturaMago - 1 / 4
+          despY_TexturaMago = 2 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Mago += direccionMago * 0.1;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Mago >= 9) {
+          direccionMago = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Mago <= -1) {
+          direccionMago = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function movimientoAbajoArribaMago() {
+      // Obtiene el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorMago) / 1000.0;
+      tiempoAnteriorMago = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoMago -= tiempoReal;
+
+      if (tiempoMovimientoMago < 0.001) {
+        // Restablece el tiempo de movimiento
+        tiempoMovimientoMago = PERIODO_MOVIMIENTO_MAGO;
+
+        // Actualiza las coordenadas de la textura según la dirección
+        if (direccionMago === 1) {
+          // Si se mueve hacia arriba, usa la textura correspondiente
+          despX_TexturaMago = despX_TexturaMago + 1 / 4;
+          despY_TexturaMago = 0;
+        } else {
+          // Si se mueve hacia abajo, usa la textura correspondiente
+          despX_TexturaMago = despX_TexturaMago - 1 / 4;
+          despY_TexturaMago = 3 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despY_Mago += direccionMago * 0.1;
+
+        // Cambia de dirección al llegar a los límites superior e inferior (9 y 0)
+        if (despY_Mago >= 9) {
+          direccionMago = -1; // Cambia para moverse hacia abajo
+        } else if (despY_Mago <= 0) {
+          direccionMago = 1; // Cambia para moverse hacia arriba
+        }
+      }
+    }
+
+    function movimientoDerechaIzquierdaBruja() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorBruja) / 1000.0;
+      tiempoAnteriorBruja = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoBruja -= tiempoReal;
+
+      if (tiempoMovimientoBruja < 0.001) {
+        tiempoMovimientoBruja = PERIODO_MOVIMIENTO_BRUJA; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionBruja === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaBruja = despX_TexturaBruja + 1 / 4
+          despY_TexturaBruja = 1 / 4;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaBruja = despX_TexturaBruja - 1 / 4
+          despY_TexturaBruja = 2 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Bruja += direccionBruja * 0.1;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Bruja >= 9) {
+          direccionBruja = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Bruja <= -1) {
+          direccionBruja = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function movimientoAbajoArribaBruja() {
+      // Obtiene el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorBruja) / 1000.0;
+      tiempoAnteriorBruja = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoBruja -= tiempoReal;
+
+      if (tiempoMovimientoBruja < 0.001) {
+        // Restablece el tiempo de movimiento
+        tiempoMovimientoBruja = PERIODO_MOVIMIENTO_BRUJA;
+
+        // Actualiza las coordenadas de la textura según la dirección
+        if (direccionBruja === 1) {
+          // Si se mueve hacia arriba, usa la textura correspondiente
+          despX_TexturaBruja = despX_TexturaBruja + 1 / 4;
+          despY_TexturaBruja = 0;
+        } else {
+          // Si se mueve hacia abajo, usa la textura correspondiente
+          despX_TexturaBruja = despX_TexturaBruja - 1 / 4;
+          despY_TexturaBruja = 3 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despY_Bruja += direccionBruja * 0.1;
+
+        // Cambia de dirección al llegar a los límites superior e inferior (9 y 0)
+        if (despY_Bruja >= 9) {
+          direccionBruja = -1; // Cambia para moverse hacia abajo
+        } else if (despY_Bruja <= 0) {
+          direccionBruja = 1; // Cambia para moverse hacia arriba
+        }
+      }
+    }
+
+    function movimientoDerechaIzquierdaMaga() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorMaga) / 1000.0;
+      tiempoAnteriorMaga = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoMaga -= tiempoReal;
+
+      if (tiempoMovimientoMaga < 0.001) {
+        tiempoMovimientoMaga = PERIODO_MOVIMIENTO_MAGA; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionMaga === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaMaga = despX_TexturaMaga + 1 / 4
+          despY_TexturaMaga = 1 / 4;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaMaga = despX_TexturaMaga - 1 / 4
+          despY_TexturaMaga = 2 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Maga += direccionMaga * 0.1;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Maga >= 9) {
+          direccionMaga = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Maga <= -1) {
+          direccionMaga = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function movimientoDerechaIzquierdaPicaro() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorPicaro) / 1000.0;
+      tiempoAnteriorPicaro = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoPicaro -= tiempoReal;
+
+      if (tiempoMovimientoPicaro < 0.001) {
+        tiempoMovimientoPicaro = PERIODO_MOVIMIENTO_PICARO; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionPicaro === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaPicaro = despX_TexturaPicaro + 1 / 4
+          despY_TexturaPicaro = 1 / 4;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaPicaro = despX_TexturaPicaro - 1 / 4
+          despY_TexturaPicaro = 2 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Picaro += direccionPicaro * 0.2;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Picaro >= 9) {
+          direccionPicaro = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Picaro <= -1) {
+          direccionPicaro = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function movimientoDerechaIzquierdaSacerdote() {
+      // Obtén el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorSacerdote) / 1000.0;
+      tiempoAnteriorSacerdote = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoSacerdote -= tiempoReal;
+
+      if (tiempoMovimientoSacerdote < 0.001) {
+        tiempoMovimientoSacerdote = PERIODO_MOVIMIENTO_SACERDOTE; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionSacerdote === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaSacerdote = despX_TexturaSacerdote + 1 / 4
+          despY_TexturaSacerdote = 1 / 4;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaSacerdote = despX_TexturaSacerdote - 1 / 4
+          despY_TexturaSacerdote = 2 / 4;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Sacerdote += direccionSacerdote * 0.3;
+
+        // Cambia de dirección al llegar a los límites (10 y -1)
+        if (despX_Sacerdote >= 1.5) {
+          direccionSacerdote = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Sacerdote <= -4) {
+          direccionSacerdote = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+    }
+
+    function secuenciaExplosion() {
+
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnterior) / 1000.0;
+      tiempoAnterior = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimiento -= tiempoReal;
+
+      if (tiempoMovimiento < 0.001) {
+        tiempoMovimiento = PERIODO_MOVIMIENTO;
+        despX_TexturaExplosion = despX_TexturaExplosion + 1 / 5;
+        despY_TexturaExplosion = 2 / 5;
+      }
+
+
+    }
+
+    function secuenciaPrincesa() {
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorPrincesa) / 1000.0;
+      tiempoAnteriorPrincesa = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoPrincesa -= tiempoReal;
+
+      if (tiempoMovimientoPrincesa < 0.001) {
+        tiempoMovimientoPrincesa = PERIODO_MOVIMIENTO_PRINCESA;
+        despX_TexturaPrincesa = despX_TexturaPrincesa + 1 / 6;
+        despY_TexturaPrincesa = 1 / 3;
+      }
+    }
+
+    function movimientoIzquierdaDerechaGato() {
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorGato) / 1000.0;
+      tiempoAnteriorGato = tiempoActual;
+
+      // Restamos el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoGato -= tiempoReal;
+
+      if (tiempoMovimientoGato < 0.001) {
+        tiempoMovimientoGato = PERIODO_MOVIMIENTO_GATO; // Resetea el tiempo de movimiento
+
+        // Cambia las coordenadas de textura según la dirección
+        if (direccionGato === 1) {
+          // Mover a la derecha, usar textura para derecha
+          despX_TexturaGato = despX_TexturaGato + 1 / 4
+          despY_TexturaGato = 6 / 8;
+        } else {
+          // Mover a la izquierda, usar textura para izquierda
+          despX_TexturaGato = despX_TexturaGato - 1 / 4
+          despY_TexturaGato = 4 / 8;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despX_Gato += direccionGato * 0.2;
+
+        // Cambia de dirección al llegar a los límites 
+        if (despX_Gato >= 13) {
+          direccionGato = -1; // Cambia a movimiento hacia la izquierda
+        } else if (despX_Gato <= 3) {
+          direccionGato = 1; // Cambia a movimiento hacia la derecha
+        }
+
+      }
+
+
+    }
+
+    function movimientoAbajoArribaGato() {
+      // Obtiene el tiempo actual y calcula la diferencia con el tiempo anterior
+      const tiempoActual = Date.now();
+      const tiempoReal = (tiempoActual - tiempoAnteriorGato) / 1000.0;
+      tiempoAnteriorGato = tiempoActual;
+
+      // Resta el tiempo transcurrido del contador de movimiento
+      tiempoMovimientoGato -= tiempoReal;
+
+      if (tiempoMovimientoGato < 0.001) {
+        // Restablece el tiempo de movimiento
+        tiempoMovimientoGato = PERIODO_MOVIMIENTO_GATO;
+
+        // Actualiza las coordenadas de la textura según la dirección
+        if (direccionGato === 1) {
+          // Si se mueve hacia arriba, usa la textura correspondiente
+          despX_TexturaGato = despX_TexturaGato + 1 / 4;
+          despY_TexturaGato = 5 / 8;
+        } else {
+          // Si se mueve hacia abajo, usa la textura correspondiente
+          despX_TexturaGato = despX_TexturaGato - 1 / 4;
+          despY_TexturaGato = 7 / 8;
+        }
+
+        // Mueve el enemigo en la dirección actual
+        despY_Gato += direccionGato * 0.2;
+
+        // Cambia de dirección al llegar a los límites superior e inferior (9 y 0)
+        if (despY_Gato >= 9) {
+          direccionGato = -1; // Cambia para moverse hacia abajo
+        } else if (despY_Gato <= 0) {
+          direccionGato = 1; // Cambia para moverse hacia arriba
+        }
+      }
+    }
+
+    // Intervalo de tiempo para mover al gato
+    const INTERVALO_MOVIMIENTO = 0.1; // Cada segundo seleccionará una nueva dirección
+    let intervaloMovimientoGato; // Variable para almacenar el ID del intervalo
+
+    function iniciarMovimientoGato() {
+      // Solo inicia `setInterval` si no se ha iniciado aún
+      if (!intervaloMovimientoGato) {
+        intervaloMovimientoGato = setInterval(movimientoAleatorioGato, INTERVALO_MOVIMIENTO);
+      }
+    }
+    function detenerMovimientoGato() {
+      // Detiene el movimiento aleatorio
+      if (intervaloMovimientoGato) {
+        clearInterval(intervaloMovimientoGato);
+        intervaloMovimientoGato = null; // Reinicia la variable para evitar que se reinicie
+      }
+    }
+
+    function movimientoAleatorioGato() {
+      // Genera un número aleatorio para seleccionar una función de movimiento
+      const movimientoAleatorio = Math.random() < 0.5 ? movimientoIzquierdaDerechaGato : movimientoAbajoArribaGato;
+
+      // Ejecuta la función seleccionada
+      movimientoAleatorio();
+    }
+
+    function detectarColisionCuadrados(x1, y1, ancho1, x2, y2, ancho2) {
+      // Calcular la mitad del ancho y altura de los cuadrados
+      const mitadAncho1 = ancho1 / 2;
+      const mitadAncho2 = ancho2 / 2;
+
+      return (
+        x1 + mitadAncho1 < x2 + ancho2 && // Borde derecho del cuadrado 1 más de la mitad de su ancho no sobrepasa el borde izquierdo del cuadrado 2
+        x1 + ancho1 - mitadAncho1 > x2 && // Borde izquierdo del cuadrado 1 más de la mitad de su ancho no sobrepasa el borde derecho del cuadrado 2
+        y1 + mitadAncho1 < y2 + ancho2 && // Borde superior del cuadrado 1 más de la mitad de su altura no sobrepasa el borde inferior del cuadrado 2
+        y1 + ancho1 - mitadAncho1 > y2    // Borde inferior del cuadrado 1 más de la mitad de su altura no sobrepasa el borde superior del cuadrado 2
+      );
+    }
+
+    function sonidoPerder() {
+      const explosionSound = new Audio('sonidos/gameOver.mp3');
+      explosionSound.play();
+      setTimeout(mostrarMensajePerdiste, 100);
+    }
+
+    function sonidoGanar() {
+      const ganarSound = new Audio('sonidos/victory.mp3');
+      ganarSound.loop = true;
+      ganarSound.play();
+      setTimeout(mostrarMensajeGanaste, 100);
+    }
+
+    function sonidoFondo() {
+      const fondoSound = new Audio('sonidos/fondo.mp3');
+      fondoSound.loop = true; // Para reproducir en bucle
+      fondoSound.volume = 0.3; // Ajusta el volumen a un 30%
+      fondoSound.play().catch(error => {
+        console.log("Error al reproducir el sonido:", error);
+      });
+    }
+
+    // Para reiniciar el estado al reiniciar el juego o en algún momento
+    function reiniciarJuego() {
+      sonidoPerderReproducido = false; // Resetea el estado para permitir que el sonido se reproduzca nuevamente
+      colisionEnemigosDetectada = false; // Resetea el estado de colisión
+      despX_Textura = 0;
+      despY_Textura = 7 / 8;
+      incX = 0;
+      incY = 0;
+      despX = -1.5;
+      despY = 7;
+    }
+
+
+    function dibuja() {
+
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      // Fondo
+      gl.activeTexture(gl.TEXTURE0);
+      gl.uniform1i(uUnidadDeTextura, 0);
+
+      identidad(MatrizTextura);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo1);
+      textura1.muestra(gl);
+
+      // Roca 1
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca, despY_Roca, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo9);
+      textura9.muestra(gl);
+
+      // Rocas 2
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca, despY_Roca - 1, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo10);
+      textura10.muestra(gl);
+
+      // Rocas 3
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca, despY_Roca - 2, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo11);
+      textura11.muestra(gl);
+
+      // Rocas 4
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca - 0.5, despY_Roca - 4, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo12);
+      textura12.muestra(gl);
+
+      // Rocas 5
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca - 0.5, despY_Roca - 5, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo13);
+      textura13.muestra(gl);
+
+      // Rocas 6
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca - 0.5, despY_Roca - 6, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo14);
+      textura14.muestra(gl);
+
+      // Rocas 7
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaRoca, despY_TexturaRoca, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Roca + 2, despY_Roca + 1, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo15);
+      textura15.muestra(gl);
+
+
+      // Verificar colisiones con enemigos
+      if (detectarColisionCuadrados(despX, despY, 1, despX_Guerrero, despY_Guerrero, 1) ||
+        detectarColisionCuadrados(despX, despY, 1, despX_Mago, despY_Mago, 1) ||
+        detectarColisionCuadrados(despX, despY, 1, despX_Bruja, despY_Bruja, 1) ||
+        detectarColisionCuadrados(despX, despY, 1, despX_Maga, despY_Maga, 1) ||
+        detectarColisionCuadrados(despX, despY, 1, despX_Picaro, despY_Picaro, 1) ||
+        detectarColisionCuadrados(despX, despY, 1, despX_Sacerdote, despY_Sacerdote, 1)) {
+
+        colisionEnemigosDetectada = true;
+
+      }
+
+      // Mostrar a Zelda o la explosión en función de la colisión
+      if (!colisionEnemigosDetectada) {
+        // Mostrar Zelda si no hay colisión
+        identidad(MatrizTextura);
+        traslacion(MatrizTextura, despX_Textura, despY_Textura, 0);
+        gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+        identidad(MatrizModelo);
+        traslacion(MatrizModelo, despX, despY, 0);
+        gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+        gl.bindTexture(gl.TEXTURE_2D, codigo2);
+        textura2.muestra(gl);
+      } else {
+
+        // Mostrar la explosión si hay colisión
+        identidad(MatrizTextura);
+        traslacion(MatrizTextura, despX_TexturaExplosion, despY_TexturaExplosion, 0);
+        gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+        identidad(MatrizModelo);
+        traslacion(MatrizModelo, despX, despY, 0); // En la posición de Zelda
+        gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+        gl.bindTexture(gl.TEXTURE_2D, codigo6);
+        textura6.muestra(gl);
+
+        secuenciaExplosion(); // Actualiza la secuencia de la explosión
+
+
+      }
+
+      // Calavera guerrera
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaGuerrero, despY_TexturaGuerrero, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Guerrero, despY_Guerrero, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo3);
+      textura3.muestra(gl);
+
+      movimientoAbajoArribaGuerrero();
+
+
+      // Calavera mago
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaMago, despY_TexturaMago, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Mago, despY_Mago, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo4);
+      textura4.muestra(gl);
+
+      movimientoAbajoArribaMago();
+
+      // bruja
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaBruja, despY_TexturaBruja, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Bruja, despY_Bruja, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo5);
+      textura5.muestra(gl);
+
+      movimientoAbajoArribaBruja();
+
+
+      // maga
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaMaga, despY_TexturaMaga, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Maga, despY_Maga, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo16);
+      textura16.muestra(gl);
+
+      movimientoDerechaIzquierdaMaga();
+
+      // picaro
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaPicaro, despY_TexturaPicaro, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Picaro, despY_Picaro, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo17);
+      textura17.muestra(gl);
+
+      movimientoDerechaIzquierdaPicaro();
+
+      // sacerdote
+      identidad(MatrizTextura);
+      traslacion(MatrizTextura, despX_TexturaSacerdote, despY_TexturaSacerdote, 0);
+      gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+      identidad(MatrizModelo);
+      traslacion(MatrizModelo, despX_Sacerdote, despY_Sacerdote, 0);
+      gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+      gl.bindTexture(gl.TEXTURE_2D, codigo18);
+      textura18.muestra(gl);
+
+      movimientoDerechaIzquierdaSacerdote();
+
+      // Verificar colisión zelda y gato
+      if (detectarColisionCuadrados(despX, despY, 1, despX_Gato, despY_Gato, 1)) {
+        colisionZeldaGato = true;
+      }
+
+      if (!colisionZeldaGato) {
+        identidad(MatrizTextura);
+        traslacion(MatrizTextura, despX_TexturaGato, despY_TexturaGato, 0);
+        gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+        identidad(MatrizModelo);
+        traslacion(MatrizModelo, despX_Gato, despY_Gato, 0);
+        gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+        gl.bindTexture(gl.TEXTURE_2D, codigo7);
+        textura7.muestra(gl);
+        // Llama a la función `movimientoAleatorioGato` cada cierto intervalo
+        iniciarMovimientoGato();
+
+      } else {
+        detenerMovimientoGato();
+        // Princesa si hay colision
+        identidad(MatrizTextura);
+        traslacion(MatrizTextura, despX_TexturaPrincesa, despY_TexturaPrincesa, 0);
+        gl.uniformMatrix4fv(uMatrizTextura, false, MatrizTextura);
+
+        identidad(MatrizModelo);
+        traslacion(MatrizModelo, despX_Gato, despY_Gato, 0);
+        gl.uniformMatrix4fv(uMatrizModelo, false, MatrizModelo);
+
+        gl.bindTexture(gl.TEXTURE_2D, codigo8);
+        textura8.muestra(gl);
+        secuenciaPrincesa();
+      }
+
+
+      requestAnimationFrame(dibuja);
+
+    }
+
+    // Función para activar el modo de pantalla completa
+    function activarPantallaCompleta() {
+      const elemento = document.documentElement; // Se refiere al elemento raíz del documento
+      if (elemento.requestFullscreen) {
+        elemento.requestFullscreen();
+      } else if (elemento.mozRequestFullScreen) { // Firefox
+        elemento.mozRequestFullScreen();
+      } else if (elemento.webkitRequestFullscreen) { // Chrome, Safari y Opera
+        elemento.webkitRequestFullscreen();
+      } else if (elemento.msRequestFullscreen) { // IE/Edge
+        elemento.msRequestFullscreen();
+      }
+    }
+
+    function mostrarBienvenida() {
+      Swal.fire({
+        title: '¡Bienvenido a la Aventura de Zelda!',
+        text: '¡Prepárate para aventurarte en el reino y rescatar a la Dama, quien ha sido transformada en un gato! Utiliza las teclas de dirección para moverte y esquivar a los enemigos que se interpongan en tu camino. ¡Buena suerte, valiente héroe!',
+        icon: 'info',
+        confirmButtonText: '¡Iniciar Aventura!',
+        background: '#fff', // Color de fondo personalizado que recuerda a Zelda
+        backdrop: `
+        rgba(119, 136, 153, 0.5)
+        url("https://66.media.tumblr.com/tumblr_maw5scIAwf1rfjowdo1_500.gif")
+        left top
+        no-repeat
+    `,
+        showClass: {
+          popup: 'animate__animated animate__fadeInDown' // Efecto de aparición
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOutUp' // Efecto al cerrar
+        }
+      }).then(() => {
+        activarPantallaCompleta(); // Activa el modo de pantalla completa
+        sonidoFondo();
+        main(); // Llama a la función principal para iniciar el juego
+      });
+    }
+
+
+    function mostrarMensajePerdiste() {
+      Swal.fire({
+        title: '¡Has caído en batalla!',
+        text: '¿Deseas intentarlo de nuevo y continuar tu misión?',
+        icon: 'error',
+        confirmButtonText: '¡Reintentar!',
+        background: '#fff', // Color de fondo que da un aspecto limpio
+        backdrop: `
+        rgba(119, 136, 153, 0.5)
+        url("https://i.gifer.com/origin/47/472f6d943073c80a9a44f6e1959d1393_w200.gif")
+        250px center
+        no-repeat
+        `,
+        showClass: {
+          popup: 'animate__animated animate__shakeX' // Efecto de sacudida
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOutUp' // Efecto al cerrar
+        }
+      }).then(() => {
+        reiniciarJuego();
+      });
+    }
+    function mostrarMensajeGanaste() {
+      Swal.fire({
+        title: '¡Felicidades, héroe!',
+        text: '¡Has rescatado a la Dama y salvado el reino! Gracias a tu valentía y habilidades, la maldición ha sido rota. ¿Listo para una nueva aventura?',
+        icon: 'success',
+        confirmButtonText: '¡Reiniciar Aventura!',
+        background: '#e6ffe6', // Fondo en tono verde suave para celebración
+        backdrop: `
+          rgba(255, 215, 0, 0.4)
+          url("https://i.makeagif.com/media/6-05-2016/OzIVbt.gif")
+          left top
+          no-repeat
+          `,
+        showClass: {
+          popup: 'animate__animated animate__bounceIn' // Efecto de aparición animado
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOutUp' // Efecto al cerrar
+        }
+      }).then(() => {
+        location.reload();
+      });
+    }
+
+    function main() {
+      canvas = document.getElementById("webglcanvas");
+
+      gl = canvas.getContext("webgl2");
+      if (!gl) {
+        document.write("WebGL 2.0 no está disponible en tu navegador");
+        return;
+      }
+
+      // Ajustar el tamaño del canvas al tamaño de la ventana
+      function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas(); // Llama a la función para establecer el tamaño inicial del canvas
+
+
+
+      document.addEventListener("keydown", keyDown, true);
+      compilaEnlazaLosShaders();
+
+      /* Se crean los objetos */
+      textura1 = new Rectangulo(gl, -5 * canvas.width / canvas.height, -5, 5 * canvas.width / canvas.height, 5, 0, 0, 1, 1);
+      codigo1 = gl.createTexture();
+      leeLaTextura("imagen1", codigo1);
+
+      //zelda
+      textura2 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 10, 1 / 8);
+      codigo2 = gl.createTexture();
+      leeLaTextura("imagen2", codigo2);
+
+      //calavera guerrera
+      textura3 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 12, 1 / 8);
+      codigo3 = gl.createTexture();
+      leeLaTextura("imagen3", codigo3);
+
+      //calavera mago
+      textura4 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 4);
+      codigo4 = gl.createTexture();
+      leeLaTextura("imagen4", codigo4);
+
+      //bruja
+      textura5 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 4);
+      codigo5 = gl.createTexture();
+      leeLaTextura("imagen5", codigo5);
+
+      //explosion
+      textura6 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 5, 1 / 5);
+      codigo6 = gl.createTexture();
+      leeLaTextura("imagen6", codigo6);
+
+      //gato
+      textura7 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 8);
+      codigo7 = gl.createTexture();
+      leeLaTextura("imagen7", codigo7);
+
+      //princesa
+      textura8 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 6, 1 / 3);
+      codigo8 = gl.createTexture();
+      leeLaTextura("imagen8", codigo8);
+
+      //roca 1
+      textura9 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo9 = gl.createTexture();
+      leeLaTextura("imagen9", codigo9);
+
+      //roca 2
+      textura10 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo10 = gl.createTexture();
+      leeLaTextura("imagen9", codigo10);
+
+      //roca 3
+      textura11 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo11 = gl.createTexture();
+      leeLaTextura("imagen9", codigo11);
+
+      //roca 4
+      textura12 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo12 = gl.createTexture();
+      leeLaTextura("imagen9", codigo12);
+
+      //roca 5
+      textura13 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo13 = gl.createTexture();
+      leeLaTextura("imagen9", codigo13);
+
+      //roca 6
+      textura14 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo14 = gl.createTexture();
+      leeLaTextura("imagen9", codigo14);
+
+      //roca 7
+      textura15 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1, 1);
+      codigo15 = gl.createTexture();
+      leeLaTextura("imagen9", codigo15);
+
+      //maga
+      textura16 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 4);
+      codigo16 = gl.createTexture();
+      leeLaTextura("imagen10", codigo16);
+
+      //picaro
+      textura17 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 4);
+      codigo17 = gl.createTexture();
+      leeLaTextura("imagen11", codigo17);
+
+      //saacerdote
+      textura18 = new Rectangulo(gl, -5, -5, -4, -4, 0, 0, 1 / 4, 1 / 4);
+      codigo18 = gl.createTexture();
+      leeLaTextura("imagen12", codigo18);
+
+
+
+      gl.useProgram(programaID);
+      uMatrizProyeccion = gl.getUniformLocation(programaID, "uMatrizProyeccion");
+      uMatrizVista = gl.getUniformLocation(programaID, "uMatrizVista");
+      uMatrizModelo = gl.getUniformLocation(programaID, "uMatrizModelo");
+      uUnidadDeTextura = gl.getUniformLocation(programaID, "uUnidadDeTextura");
+      uMatrizTextura = gl.getUniformLocation(programaID, "uMatrizTextura");
+
+
+      ortho(MatrizProyeccion, -5 * canvas.width / canvas.height, 5 * canvas.width / canvas.height, -5, 5, -5, 5);
+      gl.uniformMatrix4fv(uMatrizProyeccion, false, MatrizProyeccion);
+      identidad(MatrizVista);
+      gl.uniformMatrix4fv(uMatrizVista, false, MatrizVista);
+
+      /* Para renderizar objetos transparentes (se considera el valor alfa) */
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      gl.clearColor(176 / 255, 196 / 255, 222 / 256, 1);
+      dibuja();
+
+    }
+
+    window.onload = function () {
+      mostrarBienvenida();
+    };
+
+
+
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+
+</html>
